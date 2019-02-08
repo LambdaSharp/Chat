@@ -34,9 +34,8 @@ Items:
           KeyType: HASH
 
   - Resource: ApiGatewayPermissions
-    Type: AWS::ApiGateway::RestApi
     Allow: execute-api:ManageConnections
-    Resource: arn:aws:execute-api:*:*:*/@connections/*
+    Value: arn:aws:execute-api:*:*:*/@connections/*
 
   - Function: OnDisconnectFunction
     Memory: 256
