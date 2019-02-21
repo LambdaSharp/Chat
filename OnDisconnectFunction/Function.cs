@@ -28,35 +28,30 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using LambdaSharp;
+using LambdaSharp.Demo.WebSocketsChat.Common;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
-namespace LambdaSharp.Sample.WebsocketsChat.OnDisconnectFunction {
+namespace LambdaSharp.Demo.WebSocketsChat.OnDisconnectFunction {
 
     public class Function : ALambdaFunction<APIGatewayProxyRequest, APIGatewayProxyResponse> {
 
         //--- Fields ---
-        private string _tableName;
-        private IAmazonDynamoDB _dynamoDbClient;
+        private ConnectionsTable _connections;
 
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
-            _tableName = config.ReadDynamoDBTableName("ConnectionsTable");
-            _dynamoDbClient = new AmazonDynamoDBClient();
+            _connections = new ConnectionsTable(
+                config.ReadDynamoDBTableName("ConnectionsTable"),
+                new AmazonDynamoDBClient()
+            );
         }
 
         public override async Task<APIGatewayProxyResponse> ProcessMessageAsync(APIGatewayProxyRequest request, ILambdaContext context) {
             try {
-                context.Logger.LogLine($"ConnectionId: {request.RequestContext.ConnectionId}");
-                await _dynamoDbClient.DeleteItemAsync(new DeleteItemRequest {
-                    TableName = _tableName,
-                    Key = new Dictionary<string, AttributeValue> {
-                        ["ConnectionId"] = new AttributeValue {
-                            S = request.RequestContext.ConnectionId
-                        }
-                    }
-                });
+                context.Logger.LogLine($"Disconnected: {request.RequestContext.ConnectionId}");
+                await _connections.DeleteRowAsync(request.RequestContext.ConnectionId);
                 return new APIGatewayProxyResponse {
                     StatusCode = 200,
                     Body = "Disconnected."
@@ -65,7 +60,7 @@ namespace LambdaSharp.Sample.WebsocketsChat.OnDisconnectFunction {
                 LogError(e);
                 return new APIGatewayProxyResponse {
                     StatusCode = 500,
-                    Body = $"Failed to disconnect: {e.Message}"
+                    Body = $"Failure while attempting to disconnect: {e.Message}"
                 };
             }
         }

@@ -28,35 +28,30 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using LambdaSharp;
+using LambdaSharp.Demo.WebSocketsChat.Common;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
-namespace LambdaSharp.Sample.WebsocketsChat.OnConnectFunction {
+namespace LambdaSharp.Demo.WebSocketsChat.OnConnectFunction {
 
     public class Function : ALambdaFunction<APIGatewayProxyRequest, APIGatewayProxyResponse> {
 
         //--- Fields ---
-        private string _tableName;
-        private IAmazonDynamoDB _dynamoDbClient;
+        private ConnectionsTable _connections;
 
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
-            _tableName = config.ReadDynamoDBTableName("ConnectionsTable");
-            _dynamoDbClient = new AmazonDynamoDBClient();
+            _connections = new ConnectionsTable(
+                config.ReadDynamoDBTableName("ConnectionsTable"),
+                new AmazonDynamoDBClient()
+            );
         }
 
         public override async Task<APIGatewayProxyResponse> ProcessMessageAsync(APIGatewayProxyRequest request, ILambdaContext context) {
             try {
-                LogInfo($"ConnectionId: {request.RequestContext.ConnectionId}");
-                await _dynamoDbClient.PutItemAsync(new PutItemRequest {
-                    TableName = _tableName,
-                    Item = new Dictionary<string, AttributeValue> {
-                        ["ConnectionId"] = new AttributeValue {
-                            S = request.RequestContext.ConnectionId
-                        }
-                    }
-                });
+                LogInfo($"Connected: {request.RequestContext.ConnectionId}");
+                await _connections.InsertRowAsync(request.RequestContext.ConnectionId);
                 return new APIGatewayProxyResponse {
                     StatusCode = 200,
                     Body = "Connected."
@@ -65,7 +60,7 @@ namespace LambdaSharp.Sample.WebsocketsChat.OnConnectFunction {
                 LogError(e);
                 return new APIGatewayProxyResponse {
                     StatusCode = 500,
-                    Body = $"Failed to connect: {e.Message}"
+                    Body = $"Failure while attempting to connect: {e.Message}"
                 };
             }
         }

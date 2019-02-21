@@ -1,57 +1,24 @@
-# λ# Port of simple-websockets-chat-app
+# λ# - WebSockets with API Gateway
 
-This is a λ# port of the [netcore-simple-websockets-chat-app](https://github.com/normj/netcore-simple-websockets-chat-app) sample for AWS Lambda. For more information [Announcing WebSocket APIs in Amazon API Gateway](https://aws.amazon.com/blogs/compute/announcing-websocket-apis-in-amazon-api-gateway/) blog post.
+[This sample requires the λ# tool to deploy.](https://github.com/LambdaSharp/LambdaSharpTool)
 
-## Deploy Module
+## Overview
 
-To deploy this sample module use the the [λ# CLI](https://github.com/LambdaSharp/LambdaSharpTool).
-```
-dotnet tool install -g LambdaSharp.Tool --version 0.5-RC2
-```
+This λ# module is a port of the [netcore-simple-websockets-chat-app](https://github.com/normj/netcore-simple-websockets-chat-app) sample for AWS Lambda. For more information [Announcing WebSocket APIs in Amazon API Gateway](https://aws.amazon.com/blogs/compute/announcing-websocket-apis-in-amazon-api-gateway/) blog post.
 
-Initialize the λ# CLI
-```
-lash config
-lash init --tier Sandbox
-```
+## Deploy
 
-Then to deploy execute the following command in the root directory of this repository.
+This module is compiled to CloudFormation and deployed using the λ# CLI.
 ```
-lash deploy --tier Sandbox
+git clone https://github.com/LambdaSharp/WebSockets-Sample.git
+cd WebSockets-Sample
+lash deploy
 ```
 
-## Module Definition
+## Details
 
-```yaml
-Module: LambdaSharp.Sample.WebsocketsChat
-Items:
+> TODO
 
-  - Resource: ConnectionsTable
-    Scope: "*"
-    Type: AWS::DynamoDB::Table
-    Allow: ReadWrite
-    Properties:
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: ConnectionId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: ConnectionId
-          KeyType: HASH
+## License
 
-  - Resource: ApiGatewayPermissions
-    Allow: execute-api:ManageConnections
-    Value: arn:aws:execute-api:*:*:*/@connections/*
-
-  - Function: OnDisconnectFunction
-    Memory: 256
-    Timeout: 30
-
-  - Function: OnConnectFunction
-    Memory: 256
-    Timeout: 30
-
-  - Function: SendMessageFunction
-    Memory: 256
-    Timeout: 30
-```
+_Apache 2.0_ for the module and code.
