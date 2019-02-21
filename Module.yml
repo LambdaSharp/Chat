@@ -58,35 +58,6 @@ Items:
       DeploymentId: !Ref WebSocketDeployment
       ApiId: !Ref WebSocketApi
 
-  # - Resource: WebSocketRole
-  #   Type: AWS::IAM::Role
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Version: "2012-10-17"
-  #       Statement:
-  #         - Sid: ModuleWebSocketApiPrincipal
-  #           Effect: Allow
-  #           Principal:
-  #             Service: apigateway.amazonaws.com
-  #           Action:
-  #             - sts:AssumeRole
-  #     Policies:
-  #       - PolicyName: !Sub "${AWS::StackName}ModuleWebSocketApiPolicy"
-  #         PolicyDocument:
-  #           Version: "2012-10-17"
-  #           Statement:
-  #             - Sid: ModuleWebSocketApiLogging
-  #               Effect: Allow
-  #               Action:
-  #                 - logs:CreateLogGroup
-  #                 - logs:CreateLogStream
-  #                 - logs:DescribeLogGroups
-  #                 - logs:DescribeLogStreams
-  #                 - logs:PutLogEvents
-  #                 - logs:GetLogEvents
-  #                 - logs:FilterLogEvents
-  #               Resource: arn:aws:logs:*:*:*
-
   - Namespace: Connect
     Items:
 
