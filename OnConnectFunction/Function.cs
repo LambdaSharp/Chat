@@ -50,7 +50,7 @@ namespace LambdaSharp.Demo.WebSocketsChat.OnConnectFunction {
 
         public override async Task<APIGatewayProxyResponse> ProcessMessageAsync(APIGatewayProxyRequest request, ILambdaContext context) {
             try {
-                LogInfo($"Connected: {request.RequestContext.ConnectionId}");
+                LogInfo($"Connected: {request.RequestContext.ConnectionId} [{request.RequestContext.RouteKey}]");
                 await _connections.InsertRowAsync(request.RequestContext.ConnectionId);
                 return new APIGatewayProxyResponse {
                     StatusCode = 200,

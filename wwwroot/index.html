@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>WebSockets - Simple chat</title>
+    <style>
+        * {
+            font-family: tahoma;
+            font-size: 12px;
+            padding: 0px;
+            margin: 0px;
+        }
+
+        p {
+            line-height: 18px;
+        }
+
+        div {
+            width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #content {
+            padding: 5px;
+            background: #ddd;
+            border-radius: 5px;
+            overflow-y: scroll;
+            border: 1px solid #CCC;
+            margin-top: 10px;
+            height: 160px;
+        }
+
+        #input {
+            border-radius: 2px;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+            padding: 5px;
+            width: 400px;
+        }
+
+        #status {
+            width: 88px;
+            display: block;
+            float: left;
+            margin-top: 15px;
+        }
+    </style>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script>
+
+        // original code from: https://medium.com/@martin.sikora/node-js-websocket-simple-chat-tutorial-2def3a841b61
+
+        function main(server) {
+            var content = $('#content');
+            var input = $('#input');
+            var status = $('#status');
+            var userName = '';
+
+            // if user is running mozilla then use it's built-in WebSocket
+            window.WebSocket = window.WebSocket || window.MozWebSocket;
+
+            // show a notification if the browser doesn't support WebSocket
+            if (!window.WebSocket) {
+                content.html($('<p>', {
+                    text: 'Sorry, but your browser doesn\'t support WebSockets.'
+                }));
+                input.hide();
+                $('span').hide();
+                return;
+            }
+
+            // open connection
+            var connection = new WebSocket(server);
+            connection.onopen = function () {
+                input.removeAttr('disabled');
+
+                // first we want users to enter their names
+                status.text('Choose name:');
+            };
+            connection.onerror = function (error) {
+
+                // show message that the connection had an error
+                content.html($('<p>', {
+                    text: 'Sorry, but there\'s some problem with your connection or the server is down.'
+                }));
+            };
+            connection.onmessage = function (message) {
+
+                // try to parse JSON message. Because we know that the server always returns
+                // JSON this should work without any problem but we should make sure that
+                // the massage is not chunked or otherwise damaged.
+                try {
+                    var json = JSON.parse(message.data);
+                } catch (e) {
+                    console.log('This doesn\'t look like a valid JSON: ', message.data);
+                    return;
+                }
+
+                if (json.type === 'message') {
+                    addMessage(json.from, json.text, new Date());
+                } else {
+                    console.log('Hmm..., I\'ve never seen JSON like this: ', json);
+                }
+            };
+
+            /**
+            * Read input field value when user presses the Enter key
+            */
+            input.keydown(function (e) {
+                if (e.keyCode === 13) {
+                    var msg = $(this).val();
+                    if (!msg) {
+                        return;
+                    }
+                    $(this).val('');
+                    if(!userName) {
+
+                        // set user name
+                        userName = msg;
+                        status.text('Message:');
+                    } else {
+
+                        // send the message as an ordinary text
+                        connection.send(JSON.stringify({
+                            type: 'message',
+                            from: userName,
+                            text: msg
+                        }));
+                    }
+                }
+            });
+
+            /*
+             * Add message to the chat window
+             */
+            function addMessage(author, message, dt) {
+                content.prepend(
+                    '<p>'
+                    + '<span style="color:red">' + author + '</span> @ ' +
+                    + (dt.getHours() < 10 ? '0' + dt.getHours() : dt.getHours()) + ':'
+                    + (dt.getMinutes() < 10 ? '0' + dt.getMinutes() : dt.getMinutes())
+                    + ': ' + message
+                    + '</p>'
+                );
+            }
+        }
+
+        // fetch configuration file
+        window.fetch('config.json', { method: 'get' })
+            .then(response => response.json())
+            .then(config => {
+                $(function () {
+                    main(config.server);
+                });
+            });
+    </script>
+</head>
+
+<body>
+    <div id="content"></div>
+    <div>
+        <span id="status">Connecting...</span>
+        <input type="text" id="input" disabled="disabled" />
+    </div>
+</body>
+
+</html>

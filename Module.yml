@@ -18,6 +18,10 @@
 # limitations under the License.
 
 Module: LambdaSharp.Demo.WebSocketsChat
+Using:
+
+  - Module: LambdaSharp.S3.IO:0.5
+
 Items:
 
   # Connection Table
@@ -154,3 +158,94 @@ Items:
         Action: lambda:InvokeFunction
         FunctionName: !Ref Action::OnActionFunction
         Principal: apigateway.amazonaws.com
+
+  # Write the site configuration settings to a JSON file in the S3 bucket
+  - Resource: WebsiteConfigJson
+    Type: LambdaSharp::S3::WriteJson
+    Properties:
+      Bucket: !Ref WebsiteBucket
+      Key: config.json
+      Contents:
+        server: !Ref WebSocketUrl
+
+  # Create bucket to host website
+  - Resource: WebsiteBucket
+    Description: S3 bucket for hosting website assets
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        ErrorDocument: index.html
+        IndexDocument: index.html
+
+  - Resource: WebsiteBucketPolicy
+    Description: Public access policy
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      PolicyDocument:
+        Id: WebsiteBucket
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub "${WebsiteBucket.Arn}/*"
+      Bucket: !Ref WebsiteBucket
+    DependsOn: DeployWebsiteFiles
+
+  - Package: WebsiteFiles
+    Description: Website files to deploy
+    Files: wwwroot/
+
+  - Resource: DeployWebsiteFiles
+    Type: LambdaSharp::S3::Unzip
+    Properties:
+      SourceBucket: !Ref DeploymentBucketName
+      SourceKey: !Ref WebsiteFiles
+      DestinationBucket: !Ref WebsiteBucket
+      DestinationKey: ""
+
+  - Resource: WebsiteCloudfront
+    Description: Cloudfront distribution for https:// web access to the S3 bucket
+    Type: AWS::CloudFront::Distribution
+    DependsOn:
+      - WebsiteBucket
+    Properties:
+      DistributionConfig:
+        Comment: Cloudfront Distribution pointing to Webchat S3 bucket
+        Origins:
+          - DomainName: !GetAtt WebsiteBucket.DomainName
+            Id: S3Origin
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: http-only
+        Enabled: true
+        HttpVersion: http2
+        DefaultRootObject: index.html
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          DefaultTTL: 0
+          TargetOriginId: S3Origin
+          ForwardedValues:
+            QueryString: true
+            Cookies:
+              Forward: none
+          MinTTL: 0
+          ViewerProtocolPolicy: redirect-to-https
+        PriceClass: PriceClass_100
+
+  # Export website url
+  - Variable: WebsiteUrl
+    Description: Website URL
+    Scope: public
+    # Value: !GetAtt WebsiteBucket.WebsiteURL
+    Value: !Sub "https://${WebsiteCloudfront.DomainName}/"
+
+  - Variable: WebSocketUrl
+    Description: WebSocket URL
+    Scope: public
+    Value: !Sub "wss://${WebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${WebSocketStage}"

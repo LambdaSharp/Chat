@@ -50,7 +50,7 @@ namespace LambdaSharp.Demo.WebSocketsChat.OnDisconnectFunction {
 
         public override async Task<APIGatewayProxyResponse> ProcessMessageAsync(APIGatewayProxyRequest request, ILambdaContext context) {
             try {
-                context.Logger.LogLine($"Disconnected: {request.RequestContext.ConnectionId}");
+                LogInfo($"Disconnected: {request.RequestContext.ConnectionId} [{request.RequestContext.RouteKey}]");
                 await _connections.DeleteRowAsync(request.RequestContext.ConnectionId);
                 return new APIGatewayProxyResponse {
                     StatusCode = 200,

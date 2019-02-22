@@ -43,13 +43,17 @@ using LambdaSharp.Demo.WebSocketsChat.Common;
 
 namespace LambdaSharp.Demo.WebSocketsChat.OnActionFunction {
 
-    public class Request {
+    public class Message {
 
         //--- Properties ---
-        [JsonProperty("action")]
-        public string Action { get; set; }
-        [JsonProperty("data")]
-        public string Data { get; set; }
+        [JsonProperty("type")]
+        public string Type { get; set; } = "message";
+
+        [JsonProperty("from")]
+        public string From { get; set; }
+
+        [JsonProperty("text")]
+        public string Text { get; set; }
     }
 
     public class BadRequestException : Exception {
@@ -79,6 +83,7 @@ namespace LambdaSharp.Demo.WebSocketsChat.OnActionFunction {
 
         public override async Task<APIGatewayProxyResponse> ProcessMessageAsync(APIGatewayProxyRequest apiProxyRequest, ILambdaContext context) {
             try {
+                LogInfo($"Action: {apiProxyRequest.RequestContext.ConnectionId} [{apiProxyRequest.RequestContext.RouteKey}]");
 
                 // initialize API Gateway management client
                 var endpoint = $"https://{apiProxyRequest.RequestContext.DomainName}/{apiProxyRequest.RequestContext.Stage}";
@@ -88,21 +93,18 @@ namespace LambdaSharp.Demo.WebSocketsChat.OnActionFunction {
                 });
 
                 // deserialize request
-                var request = DeserializeJson<Request>(apiProxyRequest.Body);
+                var message = DeserializeJson<Message>(apiProxyRequest.Body);
 
                 // dispatch request based on action
                 string response;
-                switch(request.Action) {
-                case "join":
-                    response = await HandleJoinRoomAsync(request.Data);
-                    break;
-                case "send":
-                    response = await HandleSendMessageAsync(request.Data);
+                switch(message.Type) {
+                case "message":
+                    response = await HandleMessageAsync(message.From, message.Text);
                     break;
                 case null:
                     throw new BadRequestException("missing action");
                 default:
-                    throw new BadRequestException($"unknown action '{request.Action}'");
+                    throw new BadRequestException($"unknown action '{message.Type}'");
                 }
                 return new APIGatewayProxyResponse {
                     StatusCode = 200,
@@ -123,18 +125,17 @@ namespace LambdaSharp.Demo.WebSocketsChat.OnActionFunction {
             }
         }
 
-        private async Task<string> HandleJoinRoomAsync(string roomName) {
-            return "ok";
-        }
-
-        private async Task<string> HandleSendMessageAsync(string message) {
+        private async Task<string> HandleMessageAsync(string from, string message) {
 
             // enumerate open connections
             var connections = await _connections.GetAllRowsAsync();
             LogInfo($"Found {connections.Count()} open connection(s)");
 
             // attempt to send message on all open connections
-            var messageBytes = Encoding.UTF8.GetBytes(message);
+            var messageBytes = Encoding.UTF8.GetBytes(SerializeJson(new Message {
+                From = from,
+                Text = message
+            }));
             var outcomes = await Task.WhenAll(
                 connections
                     .Select(async (connectionId, index) => {
