@@ -1,4 +1,4 @@
-# λ# - WebSockets with API Gateway
+# λ# - Use WebSockets with API Gateway
 
 [This sample requires the λ# tool to deploy.](https://github.com/LambdaSharp/LambdaSharpTool)
 
@@ -17,7 +17,10 @@ lash deploy
 
 ## Details
 
-> TODO
+1. Create a DynamoDB table to track open connections.
+1. Deploy the `OnConnectFunction` and `OnDisconnectFunction` to manage websocket connections.
+1. Deploy `OnActionFunction` to broadcast messages to all open connections.
+1. Show the websocket URL.
 
 ## License
 
