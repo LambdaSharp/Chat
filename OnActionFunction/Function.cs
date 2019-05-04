@@ -81,7 +81,7 @@ namespace LambdaSharp.Demo.WebSocketsChat.OnActionFunction {
             );
         }
 
-        public override async Task<APIGatewayProxyResponse> ProcessMessageAsync(APIGatewayProxyRequest apiProxyRequest, ILambdaContext context) {
+        public override async Task<APIGatewayProxyResponse> ProcessMessageAsync(APIGatewayProxyRequest apiProxyRequest) {
             try {
                 LogInfo($"Action: {apiProxyRequest.RequestContext.ConnectionId} [{apiProxyRequest.RequestContext.RouteKey}]");
 

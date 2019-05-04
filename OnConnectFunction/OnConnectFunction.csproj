@@ -10,13 +10,12 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Amazon.Lambda.APIGatewayEvents" Version="1.2.0" />
-    <PackageReference Include="Amazon.Lambda.Core" Version="1.0.0" />
-    <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.4.0" />
+    <PackageReference Include="Amazon.Lambda.Core" Version="1.1.0" />
+    <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.5.0" />
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.17.5" />
-    <PackageReference Include="LambdaSharp" Version="0.5" />
+    <PackageReference Include="LambdaSharp" Version="0.6-RC2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Common/Common.csproj" />
   </ItemGroup>
-  
 </Project>
