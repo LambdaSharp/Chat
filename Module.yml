@@ -38,23 +38,20 @@ Items:
         - AttributeName: ConnectionId
           KeyType: HASH
 
-  - Function: OnConnectFunction
+  - Function: ChatFunction
+    Description: Function to handle all web-socket messages
     Memory: 256
     Timeout: 30
     Sources:
+
       - WebSocket: $connect
+        Invoke: OpenConnectionAsync
 
-  - Function: OnDisconnectFunction
-    Memory: 256
-    Timeout: 30
-    Sources:
       - WebSocket: $disconnect
+        Invoke: CloseConnectionAsync
 
-  - Function: OnActionFunction
-    Memory: 256
-    Timeout: 30
-    Sources:
-      - WebSocket: $default
+      - WebSocket: send
+        Invoke: SendMessageAsync
 
   # Write the site configuration settings to a JSON file in the S3 bucket
   - Resource: WebsiteConfigJson
