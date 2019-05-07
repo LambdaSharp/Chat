@@ -111,14 +111,14 @@ Items:
       DestinationBucket: !Ref WebsiteBucket
       DestinationKey: ""
 
-  - Resource: WebsiteCloudfront
-    Description: Cloudfront distribution for https:// web access to the S3 bucket
+  - Resource: WebsiteCloudFront
+    Description: CloudFront distribution for https:// web access to the S3 bucket
     Type: AWS::CloudFront::Distribution
     DependsOn:
       - WebsiteBucket
     Properties:
       DistributionConfig:
-        Comment: Cloudfront Distribution pointing to Webchat S3 bucket
+        Comment: CloudFront Distribution pointing to Webchat S3 bucket
         Origins:
           - DomainName: !GetAtt WebsiteBucket.DomainName
             Id: S3Origin
@@ -148,7 +148,7 @@ Items:
   - Variable: WebsiteUrl
     Description: Website URL
     Scope: public
-    Value: !Sub "https://${WebsiteCloudfront.DomainName}/"
+    Value: !Sub "https://${WebsiteCloudFront.DomainName}/"
 
   - Variable: WebSocketUrl
     Description: WebSocket URL
