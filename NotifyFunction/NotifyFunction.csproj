@@ -8,8 +8,9 @@
     <NoWarn>CS1998</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Amazon.Lambda.Core" Version="1.1.0"/>
-    <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.5.0"/>
+    <PackageReference Include="Amazon.Lambda.Core" Version="1.1.0" />
+    <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.5.0" />
+    <PackageReference Include="AWSSDK.ApiGatewayManagementApi" Version="3.3.100.16" />
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.17.5" />
     <PackageReference Condition="'$(LAMBDASHARP)'==''" Include="LambdaSharp" Version="0.6-RC2" />
   </ItemGroup>

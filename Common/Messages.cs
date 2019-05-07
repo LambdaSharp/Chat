@@ -23,12 +23,16 @@ using Newtonsoft.Json;
 
 namespace LambdaSharp.Demo.WebSocketsChat.Common {
 
-    public class SendMessageRequest {
+    public abstract class AMessageRequest {
 
         //--- Properties ---
         [JsonProperty("action"), JsonRequired]
         public string Action { get; set; }
+    }
 
+    public class SendMessageRequest : AMessageRequest {
+
+        //--- Properties ---
         [JsonProperty("text"), JsonRequired]
         public string Text { get; set; }
     }
