@@ -19,10 +19,9 @@
  * limitations under the License.
  */
 
-using Amazon.Lambda.Core;
 using Newtonsoft.Json;
 
-namespace LambdaSharp.Demo.WebSocketsChat.ChatFunction {
+namespace LambdaSharp.Demo.WebSocketsChat.Common {
 
     public class SendMessageRequest {
 
@@ -45,5 +44,11 @@ namespace LambdaSharp.Demo.WebSocketsChat.ChatFunction {
 
         [JsonProperty("text"), JsonRequired]
         public string Text { get; set; }
+    }
+
+    public class NotifyMessage {
+
+        //--- Properties ---
+        public string Message { get; set; }
     }
 }

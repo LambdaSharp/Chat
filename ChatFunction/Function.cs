@@ -20,16 +20,12 @@
  */
 
 using System;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
-using Amazon.Runtime;
-using LambdaSharp;
+using Amazon.SQS;
 using LambdaSharp.ApiGateway;
 using LambdaSharp.Demo.WebSocketsChat.Common;
 
@@ -49,6 +45,8 @@ namespace LambdaSharp.Demo.WebSocketsChat.ChatFunction {
 
         //--- Fields ---
         private ConnectionsTable _table;
+        private string _notifyQueueUrl;
+        private IAmazonSQS _sqsClient;
 
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
@@ -56,6 +54,8 @@ namespace LambdaSharp.Demo.WebSocketsChat.ChatFunction {
                 config.ReadDynamoDBTableName("ConnectionsTable"),
                 new AmazonDynamoDBClient()
             );
+            _notifyQueueUrl = config.ReadSqsQueueUrl("NotifyQueue");
+            _sqsClient = new AmazonSQSClient();
         }
 
         public async Task OpenConnectionAsync(APIGatewayProxyRequest request) {
@@ -64,15 +64,15 @@ namespace LambdaSharp.Demo.WebSocketsChat.ChatFunction {
                 ConnectionId = request.RequestContext.ConnectionId,
                 UserName = $"Anonymous-{RandomString(6)}"
             };
-            await NotifyAllAsync("#host", $"{record.UserName} joined");
             await _table.PutRowAsync(record);
+            await NotifyAllAsync("#host", $"{record.UserName} joined");
         }
 
         public async Task CloseConnectionAsync(APIGatewayProxyRequest request) {
             LogInfo($"Disconnected: {request.RequestContext.ConnectionId}");
             var record = await _table.GetRowAsync<ConnectionUser>(request.RequestContext.ConnectionId);
-            await _table.DeleteRowAsync(request.RequestContext.ConnectionId);
             if(record != null) {
+                await _table.DeleteRowAsync(request.RequestContext.ConnectionId);
                 await NotifyAllAsync("#host", $"{record.UserName} left");
             }
         }
@@ -83,31 +83,15 @@ namespace LambdaSharp.Demo.WebSocketsChat.ChatFunction {
         }
 
         private async Task NotifyAllAsync(string username, string message) {
-
-            // enumerate open connections
-            var connections = await _table.GetAllRowsAsync();
-            LogInfo($"Announcing to {connections.Count()} open connection(s)");
-
-            // attempt to send message on all open connections
-            var messageBytes = Encoding.UTF8.GetBytes(SerializeJson(new UserMessageResponse {
-                From = username,
-                Text = message
-            }));
-            var outcomes = await Task.WhenAll(connections.Select(async (connectionId, index) => {
-                LogInfo($"Post to connection {index}: {connectionId}");
-                try {
-                    if(!await SendMessageToWebSocketConnectionAsync(connectionId, messageBytes)) {
-                        LogInfo($"Deleting gone connection: {connectionId}");
-                        await _table.DeleteRowAsync(connectionId);
-                        return false;
-                    }
-                } catch(Exception e) {
-                    LogErrorAsWarning(e, "SendMessageToWebSocketConnectionAsync() failed");
-                    return false;
-                }
-                return true;
-            }));
-            LogInfo($"Data sent to {outcomes.Count(result => result)} connections");
+            await _sqsClient.SendMessageAsync(new Amazon.SQS.Model.SendMessageRequest {
+                MessageBody = SerializeJson(new NotifyMessage {
+                    Message = SerializeJson(new UserMessageResponse {
+                        From = username,
+                        Text = message
+                    })
+                }),
+                QueueUrl = _notifyQueueUrl
+            });
         }
     }
 }

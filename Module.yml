@@ -19,10 +19,11 @@
 
 Module: LambdaSharp.Demo.WebSocketsChat
 Using:
-
   - Module: LambdaSharp.S3.IO:0.5
-
 Items:
+
+  # TODO:
+  # - mount websocket end-point in cloudfront
 
   # Connection Table
   - Resource: ConnectionsTable
@@ -38,20 +39,31 @@ Items:
         - AttributeName: ConnectionId
           KeyType: HASH
 
+  # Create function for web-socket requests
   - Function: ChatFunction
-    Description: Function to handle all web-socket messages
+    Description: Handle web-socket messages
     Memory: 256
     Timeout: 30
     Sources:
-
       - WebSocket: $connect
         Invoke: OpenConnectionAsync
-
       - WebSocket: $disconnect
         Invoke: CloseConnectionAsync
-
       - WebSocket: send
         Invoke: SendMessageAsync
+
+  # Create function for sending response to web-sockets
+  - Function: NotifyFunction
+    Description: Notify all web-sockets
+    Memory: 256
+    Timeout: 30
+    Sources:
+      - Sqs: NotifyQueue
+
+  - Resource: NotifyQueue
+    Scope: all
+    Type: AWS::SQS::Queue
+    Allow: Send,Receive
 
   # Write the site configuration settings to a JSON file in the S3 bucket
   - Resource: WebsiteConfigJson
@@ -136,7 +148,6 @@ Items:
   - Variable: WebsiteUrl
     Description: Website URL
     Scope: public
-    # Value: !GetAtt WebsiteBucket.WebsiteURL
     Value: !Sub "https://${WebsiteCloudfront.DomainName}/"
 
   - Variable: WebSocketUrl
