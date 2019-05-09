@@ -48,6 +48,9 @@ namespace LambdaSharp.Demo.WebSocketsChat.ChatFunction {
         private string _notifyQueueUrl;
         private IAmazonSQS _sqsClient;
 
+        //--- Properties ---
+        public ConnectionUser CurrentUser { get; set; }
+
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
             _table = new ConnectionsTable(
@@ -60,26 +63,26 @@ namespace LambdaSharp.Demo.WebSocketsChat.ChatFunction {
 
         public async Task OpenConnectionAsync(APIGatewayProxyRequest request) {
             LogInfo($"Connected: {request.RequestContext.ConnectionId}");
-            var record = new ConnectionUser {
+            CurrentUser = new ConnectionUser {
                 ConnectionId = request.RequestContext.ConnectionId,
                 UserName = $"Anonymous-{RandomString(6)}"
             };
-            await _table.PutRowAsync(record);
-            await NotifyAllAsync("#host", $"{record.UserName} joined");
+            await _table.PutRowAsync(CurrentUser);
+            await NotifyAllAsync("#host", $"{CurrentUser.UserName} joined");
         }
 
         public async Task CloseConnectionAsync(APIGatewayProxyRequest request) {
             LogInfo($"Disconnected: {request.RequestContext.ConnectionId}");
-            var record = await _table.GetRowAsync<ConnectionUser>(request.RequestContext.ConnectionId);
-            if(record != null) {
-                await _table.DeleteRowAsync(request.RequestContext.ConnectionId);
-                await NotifyAllAsync("#host", $"{record.UserName} left");
+            CurrentUser = await _table.GetRowAsync<ConnectionUser>(CurrentRequest.RequestContext.ConnectionId);
+            if(CurrentUser != null) {
+                await _table.DeleteRowAsync(CurrentUser.ConnectionId);
+                await NotifyAllAsync("#host", $"{CurrentUser.UserName} left");
             }
         }
 
         public async Task SendMessageAsync(SendMessageRequest request) {
-            var record = await _table.GetRowAsync<ConnectionUser>(CurrentRequest.RequestContext.ConnectionId);
-            await NotifyAllAsync(record.UserName, request.Text);
+            CurrentUser = await _table.GetRowAsync<ConnectionUser>(CurrentRequest.RequestContext.ConnectionId);
+            await NotifyAllAsync(CurrentUser.UserName, request.Text);
         }
 
         private async Task NotifyAllAsync(string username, string message) {
