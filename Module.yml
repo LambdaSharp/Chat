@@ -22,9 +22,6 @@ Using:
   - Module: LambdaSharp.S3.IO:0.5
 Items:
 
-  # TODO:
-  # - mount websocket end-point in cloudfront
-
   # Connection Table
   - Resource: ConnectionsTable
     Scope: all
@@ -118,7 +115,7 @@ Items:
       - WebsiteBucket
     Properties:
       DistributionConfig:
-        Comment: CloudFront Distribution pointing to Webchat S3 bucket
+        Comment: CloudFront Distribution pointing to the S3 bucket
         Origins:
           - DomainName: !GetAtt WebsiteBucket.DomainName
             Id: S3Origin
