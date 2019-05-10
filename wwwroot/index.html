@@ -56,13 +56,12 @@
             var content = $('#content');
             var input = $('#input');
             var status = $('#status');
-            var userName = '';
 
             // if user is running mozilla then use it's built-in WebSocket
             window.WebSocket = window.WebSocket || window.MozWebSocket;
 
             // show a notification if the browser doesn't support WebSocket
-            if (!window.WebSocket) {
+            if(!window.WebSocket) {
                 content.html($('<p>', {
                     text: 'Sorry, but your browser doesn\'t support WebSockets.'
                 }));
@@ -73,20 +72,18 @@
 
             // open connection
             var connection = new WebSocket(server);
-            connection.onopen = function () {
+            connection.onopen = function() {
                 input.removeAttr('disabled');
-
-                // first we want users to enter their names
-                status.text('Choose name:');
+                status.text('Message:');
             };
-            connection.onerror = function (error) {
+            connection.onerror = function(error) {
 
                 // show message that the connection had an error
                 content.html($('<p>', {
                     text: 'Sorry, but there\'s some problem with your connection or the server is down.'
                 }));
             };
-            connection.onmessage = function (message) {
+            connection.onmessage = function(message) {
 
                 // try to parse JSON message. Because we know that the server always returns
                 // JSON this should work without any problem but we should make sure that
@@ -98,8 +95,28 @@
                     return;
                 }
 
-                if (json.type === 'message') {
-                    addMessage(json.from, json.text, new Date());
+                if(json.action === 'message') {
+                    var dt = new Date();
+                    var timestamp = (dt.getHours() < 10 ? '0' + dt.getHours() : dt.getHours())
+                        + ':'
+                        + (dt.getMinutes() < 10 ? '0' + dt.getMinutes() : dt.getMinutes());
+                    if(json.from === '#host') {
+
+                        // host message
+                        content.prepend($('<p>', {
+                            text: timestamp + ': ' + json.text
+                        }));
+                    } else {
+
+                        // message from another user
+                        var span = document.createElement('span');
+                        span.style.cssText = 'color:blue';
+                        span.append(document.createTextNode(json.from));
+                        var p = document.createElement('p');
+                        p.append(span);
+                        p.append(document.createTextNode(' @ ' + timestamp + ': ' + json.text));
+                        content.prepend(p);
+                    }
                 } else {
                     console.log('Hmm..., I\'ve never seen JSON like this: ', json);
                 }
@@ -108,50 +125,28 @@
             /**
             * Read input field value when user presses the Enter key
             */
-            input.keydown(function (e) {
-                if (e.keyCode === 13) {
+            input.keydown(function(e) {
+                if(e.keyCode === 13) {
                     var msg = $(this).val();
-                    if (!msg) {
+                    if(!msg) {
                         return;
                     }
                     $(this).val('');
-                    if(!userName) {
 
-                        // set user name
-                        userName = msg;
-                        status.text('Message:');
-                    } else {
-
-                        // send the message as an ordinary text
-                        connection.send(JSON.stringify({
-                            type: 'message',
-                            from: userName,
-                            text: msg
-                        }));
-                    }
+                    // send the message as an ordinary text
+                    connection.send(JSON.stringify({
+                        action: 'send',
+                        text: msg
+                    }));
                 }
             });
-
-            /*
-             * Add message to the chat window
-             */
-            function addMessage(author, message, dt) {
-                content.prepend(
-                    '<p>'
-                    + '<span style="color:red">' + author + '</span> @ ' +
-                    + (dt.getHours() < 10 ? '0' + dt.getHours() : dt.getHours()) + ':'
-                    + (dt.getMinutes() < 10 ? '0' + dt.getMinutes() : dt.getMinutes())
-                    + ': ' + message
-                    + '</p>'
-                );
-            }
         }
 
         // fetch configuration file
         window.fetch('config.json', { method: 'get' })
             .then(response => response.json())
             .then(config => {
-                $(function () {
+                $(function() {
                     main(config.server);
                 });
             });

@@ -19,9 +19,7 @@
 
 Module: LambdaSharp.Demo.WebSocketsChat
 Using:
-
   - Module: LambdaSharp.S3.IO:0.5
-
 Items:
 
   # Connection Table
@@ -38,126 +36,31 @@ Items:
         - AttributeName: ConnectionId
           KeyType: HASH
 
-  - Resource: WebSocketApi
-    Type: AWS::ApiGatewayV2::Api
-    Properties:
-      Name: !Sub "${AWS::StackName} Module WebSocket API"
-      ProtocolType: WEBSOCKET
-      RouteSelectionExpression: $request.body.action
+  # Create function for web-socket requests
+  - Function: ChatFunction
+    Description: Handle web-socket messages
+    Memory: 256
+    Timeout: 30
+    Sources:
+      - WebSocket: $connect
+        Invoke: OpenConnectionAsync
+      - WebSocket: $disconnect
+        Invoke: CloseConnectionAsync
+      - WebSocket: send
+        Invoke: SendMessageAsync
 
-  - Resource: WebSocketDeployment
-    Type: AWS::ApiGatewayV2::Deployment
-    Properties:
-      ApiId: !Ref WebSocketApi
-    DependsOn:
-      - Connect::Route
-      - Action::Route
-      - Disconnect::Route
+  # Create function for sending response to web-sockets
+  - Function: NotifyFunction
+    Description: Notify all web-sockets
+    Memory: 256
+    Timeout: 30
+    Sources:
+      - Sqs: NotifyQueue
 
-  - Resource: WebSocketStage
-    Type: AWS::ApiGatewayV2::Stage
-    Properties:
-      StageName: LATEST
-      Description: LATEST Stage
-      DeploymentId: !Ref WebSocketDeployment
-      ApiId: !Ref WebSocketApi
-
-  - Namespace: Connect
-    Items:
-
-    - Resource: Route
-      Type: AWS::ApiGatewayV2::Route
-      Properties:
-        ApiId: !Ref WebSocketApi
-        RouteKey: $connect
-        AuthorizationType: NONE
-        OperationName: ConnectRoute
-        Target: !Sub "integrations/${Connect::Integration}"
-
-    - Resource: Integration
-      Type: AWS::ApiGatewayV2::Integration
-      Properties:
-        ApiId: !Ref WebSocketApi
-        Description: Connect Integration
-        IntegrationType: AWS_PROXY
-        IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Connect::OnConnectFunction.Arn}/invocations"
-
-    - Function: OnConnectFunction
-      Memory: 256
-      Timeout: 30
-
-    - Resource: Permission
-      Type: AWS::Lambda::Permission
-      Properties:
-        Action: lambda:InvokeFunction
-        FunctionName: !Ref Connect::OnConnectFunction
-        Principal: apigateway.amazonaws.com
-
-  - Namespace: Disconnect
-    Items:
-
-    - Resource: Route
-      Type: AWS::ApiGatewayV2::Route
-      Properties:
-        ApiId: !Ref WebSocketApi
-        RouteKey: $disconnect
-        AuthorizationType: NONE
-        OperationName: DisconnectRoute
-        Target: !Sub "integrations/${Disconnect::Integration}"
-
-    - Resource: Integration
-      Type: AWS::ApiGatewayV2::Integration
-      Properties:
-        ApiId: !Ref WebSocketApi
-        Description: Disconnect Integration
-        IntegrationType: AWS_PROXY
-        IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Disconnect::OnDisconnectFunction.Arn}/invocations"
-
-    - Function: OnDisconnectFunction
-      Memory: 256
-      Timeout: 30
-
-    - Resource: Permission
-      Type: AWS::Lambda::Permission
-      Properties:
-        Action: lambda:InvokeFunction
-        FunctionName: !Ref Disconnect::OnDisconnectFunction
-        Principal: apigateway.amazonaws.com
-
-  - Namespace: Action
-    Items:
-
-    - Resource: Route
-      Type: AWS::ApiGatewayV2::Route
-      Properties:
-        ApiId: !Ref WebSocketApi
-        RouteKey: $default
-        AuthorizationType: NONE
-        OperationName: SendRoute
-        Target: !Sub "integrations/${Action::Integration}"
-
-    - Resource: Integration
-      Type: AWS::ApiGatewayV2::Integration
-      Properties:
-        ApiId: !Ref WebSocketApi
-        Description: Send Integration
-        IntegrationType: AWS_PROXY
-        IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Action::OnActionFunction.Arn}/invocations"
-
-    - Resource: ApiGatewayPermissions
-      Allow: execute-api:ManageConnections
-      Value: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/LATEST/POST/@connections/*
-
-    - Function: OnActionFunction
-      Memory: 256
-      Timeout: 30
-
-    - Resource: Permission
-      Type: AWS::Lambda::Permission
-      Properties:
-        Action: lambda:InvokeFunction
-        FunctionName: !Ref Action::OnActionFunction
-        Principal: apigateway.amazonaws.com
+  - Resource: NotifyQueue
+    Scope: all
+    Type: AWS::SQS::Queue
+    Allow: Send,Receive
 
   # Write the site configuration settings to a JSON file in the S3 bucket
   - Resource: WebsiteConfigJson
@@ -205,14 +108,14 @@ Items:
       DestinationBucket: !Ref WebsiteBucket
       DestinationKey: ""
 
-  - Resource: WebsiteCloudfront
-    Description: Cloudfront distribution for https:// web access to the S3 bucket
+  - Resource: WebsiteCloudFront
+    Description: CloudFront distribution for https:// web access to the S3 bucket
     Type: AWS::CloudFront::Distribution
     DependsOn:
       - WebsiteBucket
     Properties:
       DistributionConfig:
-        Comment: Cloudfront Distribution pointing to Webchat S3 bucket
+        Comment: CloudFront Distribution pointing to the S3 bucket
         Origins:
           - DomainName: !GetAtt WebsiteBucket.DomainName
             Id: S3Origin
@@ -242,10 +145,9 @@ Items:
   - Variable: WebsiteUrl
     Description: Website URL
     Scope: public
-    # Value: !GetAtt WebsiteBucket.WebsiteURL
-    Value: !Sub "https://${WebsiteCloudfront.DomainName}/"
+    Value: !Sub "https://${WebsiteCloudFront.DomainName}/"
 
   - Variable: WebSocketUrl
     Description: WebSocket URL
     Scope: public
-    Value: !Sub "wss://${WebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${WebSocketStage}"
+    Value: !Ref Module::WebSocket::Url

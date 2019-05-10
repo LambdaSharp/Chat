@@ -24,50 +24,56 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
+using Newtonsoft.Json;
 
 namespace LambdaSharp.Demo.WebSocketsChat.Common {
+
+    public class ConnectionUser {
+
+        //--- Properties ---
+        public string ConnectionId { get; set; }
+        public string UserName { get; set; }
+    }
 
     public class ConnectionsTable {
 
         //--- Fields ---
-        private readonly string _tableName;
         private readonly IAmazonDynamoDB _dynamoDbClient;
+        private readonly Table _table;
 
         //--- Constructors ---
-        public ConnectionsTable(string tableName, IAmazonDynamoDB dynamoDBClient) {
-            _tableName = tableName ?? throw new ArgumentNullException(nameof(tableName));
-            _dynamoDbClient = dynamoDBClient ?? throw new ArgumentNullException(nameof(dynamoDBClient));
+        public ConnectionsTable(
+            string tableName,
+            IAmazonDynamoDB dynamoDbClient
+        ) {
+            _dynamoDbClient = dynamoDbClient ?? throw new ArgumentNullException(nameof(dynamoDbClient));
+            _table = Table.LoadTable(
+                _dynamoDbClient,
+                tableName ?? throw new ArgumentNullException(nameof(tableName))
+            );
         }
 
         //--- Methods ---
-        public async Task InsertRowAsync(string connectionId)
-            => await _dynamoDbClient.PutItemAsync(new PutItemRequest {
-                TableName = _tableName,
-                Item = new Dictionary<string, AttributeValue> {
-                    ["ConnectionId"] = new AttributeValue {
-                        S = connectionId
-                    }
-                }
-            });
+        public Task PutRowAsync<T>(T record) => _table.PutItemAsync(Document.FromJson(JsonConvert.SerializeObject(record)));
 
-        public async Task<IEnumerable<string>> GetAllRowsAsync()
-            => (await _dynamoDbClient.ScanAsync(new ScanRequest {
-                    TableName = _tableName,
-                    ProjectionExpression = "ConnectionId"
+        public async Task<T> GetRowAsync<T>(string id) {
+            var record = await _table.GetItemAsync(id);
+            return (record != null)
+                ? JsonConvert.DeserializeObject<T>(record.ToJson())
+                : default;
+        }
+
+        public async Task<IEnumerable<string>> GetAllRowsAsync() {
+            return (await _dynamoDbClient.ScanAsync(new ScanRequest {
+                TableName = _table.TableName,
+                ProjectionExpression = "ConnectionId"
             }))
                 .Items
                 .Select(item => item["ConnectionId"].S)
                 .ToList();
-
-        public Task DeleteRowAsync(string connectionId)
-            => _dynamoDbClient.DeleteItemAsync(new DeleteItemRequest {
-                TableName = _tableName,
-                Key = new Dictionary<string, AttributeValue> {
-                    ["ConnectionId"] = new AttributeValue {
-                        S = connectionId
-                    }
-                }
-            });
+        }
+        public Task DeleteRowAsync(string id) => _table.DeleteItemAsync(id);
     }
 }
