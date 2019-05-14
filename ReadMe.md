@@ -1,6 +1,6 @@
 # λ# - Create a Web Chat with API Gateway Websockets
 
-[This sample requires the λ# tool to deploy.](https://lambdasharp.github.io/)
+[This sample requires the λ# tool to deploy.](https://lambdasharp.net/)
 
 ## Overview
 
@@ -34,6 +34,27 @@ During the build phase, λ# extracts the message schema from the .NET implementa
 
     - WebSocket: send
       Invoke: SendMessageAsync
+```
+
+Defining the JSON schema for the web-socket route doesn't require any special effort beyond some standard JSON annotations using the corresponding type.
+```csharp
+public abstract class AMessageRequest {
+
+    //--- Properties ---
+    [JsonProperty("action"), JsonRequired]
+    public string Action { get; set; }
+}
+
+public class SendMessageRequest : AMessageRequest {
+
+    //--- Properties ---
+    [JsonProperty("text"), JsonRequired]
+    public string Text { get; set; }
+}
+
+public async Task SendMessageAsync(SendMessageRequest request) {
+  ...
+}
 ```
 
 ## CloudFormation Details
