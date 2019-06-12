@@ -61,11 +61,11 @@ namespace LambdaSharp.Demo.WebSocketsChat.ChatFunction {
             _sqsClient = new AmazonSQSClient();
         }
 
-        public async Task OpenConnectionAsync(APIGatewayProxyRequest request) {
+        public async Task OpenConnectionAsync(APIGatewayProxyRequest request, string username = null) {
             LogInfo($"Connected: {request.RequestContext.ConnectionId}");
             CurrentUser = new ConnectionUser {
                 ConnectionId = request.RequestContext.ConnectionId,
-                UserName = $"Anonymous-{RandomString(6)}"
+                UserName = username ?? $"Anonymous-{RandomString(6)}"
             };
             await _table.PutRowAsync(CurrentUser);
             await NotifyAllAsync("#host", $"{CurrentUser.UserName} joined");

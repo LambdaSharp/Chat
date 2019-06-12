@@ -43,11 +43,11 @@ Items:
     Timeout: 30
     Sources:
       - WebSocket: $connect
-        Invoke: OpenConnectionAsync
+        Invoke: OpenConnection
       - WebSocket: $disconnect
-        Invoke: CloseConnectionAsync
+        Invoke: CloseConnection
       - WebSocket: send
-        Invoke: SendMessageAsync
+        Invoke: SendMessage
 
   # Create function for sending response to web-sockets
   - Function: NotifyFunction

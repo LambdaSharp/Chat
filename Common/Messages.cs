@@ -26,33 +26,37 @@ namespace LambdaSharp.Demo.WebSocketsChat.Common {
     public abstract class AMessageRequest {
 
         //--- Properties ---
-        [JsonProperty("action"), JsonRequired]
+        [JsonProperty("action", Required = Required.Always)]
         public string Action { get; set; }
     }
 
     public class SendMessageRequest : AMessageRequest {
 
         //--- Properties ---
-        [JsonProperty("text"), JsonRequired]
+        [JsonProperty("text", Required = Required.Always)]
         public string Text { get; set; }
+
+        public int? Year { get; set; }
+
     }
 
     public class UserMessageResponse {
 
         //--- Properties ---
-        [JsonProperty("action"), JsonRequired]
+        [JsonProperty("action", Required = Required.Always)]
         public string Action { get; } = "message";
 
-        [JsonProperty("from"), JsonRequired]
+        [JsonProperty("from", Required = Required.Always)]
         public string From { get; set; }
 
-        [JsonProperty("text"), JsonRequired]
+        [JsonProperty("text", Required = Required.Always)]
         public string Text { get; set; }
     }
 
     public class NotifyMessage {
 
         //--- Properties ---
+        [JsonProperty(Required = Required.Always)]
         public string Message { get; set; }
     }
 }
