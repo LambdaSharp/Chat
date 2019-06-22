@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <Deterministic>true</Deterministic>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <RootNamespace>LambdaSharp.Demo.WebSocketsChat.ChatFunction</RootNamespace>
     <AWSProjectType>Lambda</AWSProjectType>
@@ -12,12 +13,12 @@
     <PackageReference Include="Amazon.Lambda.Core" Version="1.1.0" />
     <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.5.0" />
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.17.5" />
-    <PackageReference Condition="'$(LAMBDASHARP)'==''" Include="LambdaSharp" Version="0.6" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Common/Common.csproj" />
   </ItemGroup>
-  <ItemGroup Condition="'$(LAMBDASHARP)'!=''">
-    <ProjectReference Include="$(LAMBDASHARP)/src/LambdaSharp/LambdaSharp.csproj" />
+  <ItemGroup>
+    <PackageReference Condition="'$(LAMBDASHARP)'==''" Include="LambdaSharp" Version="0.6.0.1"/>
+    <ProjectReference Condition="'$(LAMBDASHARP)'!=''" Include="$(LAMBDASHARP)/src/LambdaSharp/LambdaSharp.csproj" />
   </ItemGroup>
 </Project>
