@@ -1,10 +1,7 @@
 /*
- * MindTouch λ#
- * Copyright (C) 2018-2019 MindTouch, Inc.
- * www.mindtouch.com  oss@mindtouch.com
- *
- * For community documentation and downloads visit mindtouch.com;
- * please review the licensing section.
+ * LambdaSharp (λ#)
+ * Copyright (C) 2018-2019
+ * lambdasharp.net
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,13 +27,13 @@ using Amazon.DynamoDBv2;
 using Amazon.Lambda.Core;
 using Amazon.Runtime;
 using LambdaSharp;
-using LambdaSharp.Demo.WebSocketsChat.Common;
+using Demo.WebSocketsChat.Common;
 using LambdaSharp.SimpleQueueService;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
-namespace LambdaSharp.Demo.WebSocketsChat.NotifyFunction {
+namespace Demo.WebSocketsChat.NotifyFunction {
 
     public class Function : ALambdaQueueFunction<NotifyMessage> {
 
