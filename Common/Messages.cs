@@ -16,44 +16,31 @@
  * limitations under the License.
  */
 
-using Newtonsoft.Json;
-
 namespace Demo.WebSocketsChat.Common {
 
     public abstract class AMessageRequest {
 
         //--- Properties ---
-        [JsonProperty("action", Required = Required.Always)]
         public string Action { get; set; }
     }
 
     public class SendMessageRequest : AMessageRequest {
 
         //--- Properties ---
-        [JsonProperty("text", Required = Required.Always)]
         public string Text { get; set; }
-
-        public int? Year { get; set; }
-
     }
 
     public class UserMessageResponse {
 
         //--- Properties ---
-        [JsonProperty("action", Required = Required.Always)]
         public string Action { get; } = "message";
-
-        [JsonProperty("from", Required = Required.Always)]
         public string From { get; set; }
-
-        [JsonProperty("text", Required = Required.Always)]
         public string Text { get; set; }
     }
 
     public class NotifyMessage {
 
         //--- Properties ---
-        [JsonProperty(Required = Required.Always)]
         public string Message { get; set; }
     }
 }

@@ -1,0 +1,93 @@
+@page "/"
+
+@using System.Net.WebSockets
+@using System.Text
+@using System.Text.Json
+@using System.Threading
+@using Demo.WebSocketsChat.Common
+
+
+@implements IDisposable
+
+@inject HttpClient Http
+
+<h1>Echo test</h1>
+<h3>State: @webSocket.State</h3>
+
+@if(webSocket.State == WebSocketState.Open) {
+    <form @onsubmit="SendMessageAsync">
+        Message: <input @bind="@input" />
+        <button type="submit">Send</button>
+    </form>
+    <div>
+        @foreach(var message in Enumerable.Reverse(messages)) {
+            @if(message.From == "#host") {
+                <p>@DateTimeOffset.UtcNow.ToString("HH:mm"): @message.Text</p>
+            } else {
+                <p><span style="color:blue">@message.From</span> @DateTimeOffset.UtcNow.ToString("HH:mm"): @message.Text</p>
+            }
+        }
+    </div>
+}
+
+@code {
+
+    //--- Types ---
+    private class Config {
+
+        //--- Properties ---
+        public string ServerUri { get; set; }
+    }
+
+    //--- Fields ---
+    CancellationTokenSource disposalTokenSource = new CancellationTokenSource();
+    ClientWebSocket webSocket = new ClientWebSocket();
+    List<UserMessageResponse> messages = new List<UserMessageResponse>();
+    string input = "";
+
+    //--- Methods ---
+    protected override async Task OnInitializedAsync() {
+        var config = await Http.GetFromJsonAsync<Config>("config.json");
+        Console.WriteLine($"Connecting to :{config.ServerUri}");
+        await webSocket.ConnectAsync(new Uri(config.ServerUri), disposalTokenSource.Token);
+        Console.WriteLine("Connected!");
+        _ = ReceiveLoop();
+    }
+
+    private async Task SendMessageAsync() {
+        var json = JsonSerializer.Serialize(new SendMessageRequest {
+            Action = "send",
+            Text = input
+        });
+        Console.WriteLine($"Sending: {json}");
+        await webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(json)), WebSocketMessageType.Text, true, disposalTokenSource.Token);
+        input = "";
+    }
+
+    private async Task ReceiveLoop() {
+        var buffer = new ArraySegment<byte>(new byte[1024]);
+        while(!disposalTokenSource.IsCancellationRequested) {
+
+            // Note that the received block might only be part of a larger message. If this applies in your scenario,
+            // check the received.EndOfMessage and consider buffering the blocks until that property is true.
+            // Or use a higher-level library such as SignalR.
+            var received = await webSocket.ReceiveAsync(buffer, disposalTokenSource.Token);
+            var json = Encoding.UTF8.GetString(buffer.Array, 0, received.Count);
+
+            // deserialize received JSON payload
+            Console.WriteLine($"Received: {json}");
+            var message = JsonSerializer.Deserialize<UserMessageResponse>(json);
+            if(message.Action == "message") {
+                messages.Add(message);
+            }
+
+            // update UI
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose() {
+        disposalTokenSource.Cancel();
+        _ = webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Bye", CancellationToken.None);
+    }
+}

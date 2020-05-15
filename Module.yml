@@ -15,10 +15,11 @@
 # limitations under the License.
 
 Module: Demo.WebSocketsChat
+Pragmas:
+  - Overrides:
+      Module::WebSocket.RouteSelectionExpression: $request.body.Action
 Using:
-
   - Module: LambdaSharp.S3.IO@lambdasharp
-
 Items:
 
   # Connection Table
@@ -68,7 +69,7 @@ Items:
       Bucket: !Ref WebsiteBucket
       Key: config.json
       Contents:
-        server: !Ref WebSocketUrl
+        ServerUri: !Ref WebSocketUrl
 
   # Create bucket to host website
   - Resource: WebsiteBucket
@@ -96,8 +97,8 @@ Items:
     DependsOn: DeployWebsiteFiles
 
   - Package: WebsiteFiles
-    Description: Website files to deploy
-    Files: wwwroot/
+    Build: dotnet publish -c Release BlazorWebSocket
+    Files: BlazorWebSocket/bin/Release/netstandard2.1/publish/wwwroot/
 
   - Resource: DeployWebsiteFiles
     Type: LambdaSharp::S3::Unzip
@@ -107,44 +108,45 @@ Items:
       DestinationBucket: !Ref WebsiteBucket
       DestinationKey: ""
 
-  - Resource: WebsiteCloudFront
-    Description: CloudFront distribution for https:// web access to the S3 bucket
-    Type: AWS::CloudFront::Distribution
-    DependsOn:
-      - WebsiteBucket
-    Properties:
-      DistributionConfig:
-        Comment: CloudFront Distribution pointing to the S3 bucket
-        Origins:
-          - DomainName: !GetAtt WebsiteBucket.DomainName
-            Id: S3Origin
-            CustomOriginConfig:
-              HTTPPort: 80
-              HTTPSPort: 443
-              OriginProtocolPolicy: http-only
-        Enabled: true
-        HttpVersion: http2
-        DefaultRootObject: index.html
-        DefaultCacheBehavior:
-          AllowedMethods:
-            - GET
-            - HEAD
-          Compress: true
-          DefaultTTL: 0
-          TargetOriginId: S3Origin
-          ForwardedValues:
-            QueryString: true
-            Cookies:
-              Forward: none
-          MinTTL: 0
-          ViewerProtocolPolicy: redirect-to-https
-        PriceClass: PriceClass_100
+  # - Resource: WebsiteCloudFront
+  #   Description: CloudFront distribution for https:// web access to the S3 bucket
+  #   Type: AWS::CloudFront::Distribution
+  #   DependsOn:
+  #     - WebsiteBucket
+  #   Properties:
+  #     DistributionConfig:
+  #       Comment: CloudFront Distribution pointing to the S3 bucket
+  #       Origins:
+  #         - DomainName: !GetAtt WebsiteBucket.DomainName
+  #           Id: S3Origin
+  #           CustomOriginConfig:
+  #             HTTPPort: 80
+  #             HTTPSPort: 443
+  #             OriginProtocolPolicy: http-only
+  #       Enabled: true
+  #       HttpVersion: http2
+  #       DefaultRootObject: index.html
+  #       DefaultCacheBehavior:
+  #         AllowedMethods:
+  #           - GET
+  #           - HEAD
+  #         Compress: true
+  #         DefaultTTL: 0
+  #         TargetOriginId: S3Origin
+  #         ForwardedValues:
+  #           QueryString: true
+  #           Cookies:
+  #             Forward: none
+  #         MinTTL: 0
+  #         ViewerProtocolPolicy: redirect-to-https
+  #       PriceClass: PriceClass_100
 
   # Export website url
   - Variable: WebsiteUrl
     Description: Website URL
     Scope: public
-    Value: !Sub "https://${WebsiteCloudFront.DomainName}/"
+    Value: !GetAtt WebsiteBucket.WebsiteURL
+    # Value: !Sub "https://${WebsiteCloudFront.DomainName}/"
 
   - Variable: WebSocketUrl
     Description: WebSocket URL
