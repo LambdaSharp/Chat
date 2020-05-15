@@ -1,4 +1,4 @@
-# LambdaSharp - Create a Web Chat with API Gateway Websockets
+# LambdaSharp - Create a Web Chat with API Gateway WebSockets and ASP.NET Core Blazor WebAssembly
 
 [This sample requires the LambdaSharp CLI to deploy.](https://lambdasharp.net/)
 
