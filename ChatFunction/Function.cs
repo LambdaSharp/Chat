@@ -85,8 +85,8 @@ namespace Demo.WebSocketsChat.ChatFunction {
 
         private async Task NotifyAllAsync(string username, string message) {
             await _sqsClient.SendMessageAsync(new Amazon.SQS.Model.SendMessageRequest {
-                MessageBody = SerializeJson(new NotifyMessage {
-                    Message = SerializeJson(new UserMessageResponse {
+                MessageBody = LambdaSerializer.Serialize(new NotifyMessage {
+                    Message = LambdaSerializer.Serialize(new UserMessageResponse {
                         From = username,
                         Text = message
                     })
