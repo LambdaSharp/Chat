@@ -27,9 +27,6 @@ using LambdaSharp;
 using LambdaSharp.ApiGateway;
 using Demo.WebSocketsChat.Common;
 
-// Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
-[assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
-
 namespace Demo.WebSocketsChat.ChatFunction {
 
     public class Function : ALambdaApiGatewayFunction {
@@ -85,8 +82,8 @@ namespace Demo.WebSocketsChat.ChatFunction {
 
         private async Task NotifyAllAsync(string username, string message) {
             await _sqsClient.SendMessageAsync(new Amazon.SQS.Model.SendMessageRequest {
-                MessageBody = SerializeJson(new NotifyMessage {
-                    Message = SerializeJson(new UserMessageResponse {
+                MessageBody = LambdaSerializer.Serialize(new NotifyMessage {
+                    Message = LambdaSerializer.Serialize(new UserMessageResponse {
                         From = username,
                         Text = message
                     })

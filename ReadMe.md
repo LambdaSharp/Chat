@@ -1,10 +1,12 @@
-# LambdaSharp - Create a Web Chat with API Gateway Websockets
+# LambdaSharp - Create a Web Chat with API Gateway WebSockets and ASP.NET Core Blazor WebAssembly
 
 [This sample requires the LambdaSharp CLI to deploy.](https://lambdasharp.net/)
 
 ## Overview
 
-This LambdaSharp module creates a web chat front-end and back-end using CloudFormation. The front-end is served by an S3 bucket and secured by a CloudFront distribution. The back-end uses API Gateway Websockets to facilitate communication between clients. The assets for the front-end are uploaded from the `wwwroot` folder and copied to the S3 bucket during deployment. Afterwards, a CloudFront distribution is created to provide secure access over `https://` to the front-end. In addition, an API Gateway (v2) is deployed with two Lambda functions that handle websocket connections and message notifications.
+This LambdaSharp module creates a web chat front-end using [ASP.NET Core Blazor WebAssembly](https://docs.microsoft.com/en-us/aspnet/core/blazor/get-started) and back-end using [API Gateway V2 WebSocket](https://aws.amazon.com/blogs/compute/announcing-websocket-apis-in-amazon-api-gateway/) as self-contained CloudFormation template. The front-end is served by an S3 bucket and secured by a CloudFront distribution. The front-end code is delivered as [WebAssembly](https://webassembly.org/) using ASP.NET Core Blazor. The back-end uses API Gateway V2 WebSocket to facilitate communication between clients. The code and assets for the front-end are built by `dotnet` and then copied to the S3 bucket during deployment. Afterwards, a CloudFront distribution is created to provide secure access over `https://` to the front-end. Finally, an API Gateway V2 WebSocket is deployed with two Lambda functions that handle WebSocket connections and message notifications.
+
+> **NOTE:** This LambdaSharp module requires .NET Core 3.1.201 and LambdaSharp.Tool 0.8, or later.
 
 ## Deploy Module
 
@@ -15,7 +17,7 @@ cd WebSocketsChat-Sample
 lash deploy
 ```
 
-## API Gateway .NET
+## API Gateway .NET (WebSocket)
 
 During the build phase, LambdaSharp extracts the message schema from the .NET implementation and uses it to configure the API Gateway V2 instance. If an incoming does not confirm to the expected schema of the web-socket route, then API Gateway will automatically reject it before it reaches the Lambda function.
 
@@ -41,14 +43,12 @@ Defining the JSON schema for the web-socket route doesn't require any special ef
 public abstract class AMessageRequest {
 
     //--- Properties ---
-    [JsonProperty("action"), JsonRequired]
     public string Action { get; set; }
 }
 
 public class SendMessageRequest : AMessageRequest {
 
     //--- Properties ---
-    [JsonProperty("text"), JsonRequired]
     public string Text { get; set; }
 }
 
@@ -75,15 +75,15 @@ The following happens when the module is deployed.
 
 ## Other Resources
 
-The following site allows direct interactions with the websockets end-point using the websocket URL.
+The following site allows direct interactions with the WebSocket end-point using the WebSocket URL.
 
 https://www.websocket.org/echo.html
 
 The websocket payload is a JSON document with the following format:
 ```json
 {
-    "action": "send",
-    "text": "<message>"
+    "Action": "send",
+    "Text": "<message>"
 }
 ```
 

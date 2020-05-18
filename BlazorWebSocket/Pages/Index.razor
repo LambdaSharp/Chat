@@ -1,0 +1,133 @@
+@page "/"
+
+@using System.Net.WebSockets
+@using System.IO;
+@using System.Text
+@using System.Text.Json
+@using System.Threading
+@using Demo.WebSocketsChat.Common
+
+
+@implements IDisposable
+
+@inject HttpClient Http
+
+<h1>WebSockets - Simple Chat</h1>
+<h3>State: @_webSocket.State</h3>
+
+@if(_webSocket.State == WebSocketState.Open) {
+    <form @onsubmit="SendMessageAsync">
+        Message: <input @bind="@_input" />
+        <button type="submit">Send</button>
+    </form>
+    <div>
+        @foreach(var message in Enumerable.Reverse(_messages)) {
+            @if(message.From == "#host") {
+                <p>@DateTimeOffset.UtcNow.ToString("HH:mm"): @message.Text</p>
+            } else {
+                <p><span style="color:blue">@message.From</span> @DateTimeOffset.UtcNow.ToString("HH:mm"): @message.Text</p>
+            }
+        }
+    </div>
+}
+
+@code {
+
+    //--- Types ---
+    private class Config {
+
+        //--- Properties ---
+        public string ServerUri { get; set; }
+    }
+
+    //--- Fields ---
+    private readonly CancellationTokenSource _disposalTokenSource = new CancellationTokenSource();
+    private readonly ClientWebSocket _webSocket = new ClientWebSocket();
+    private readonly List<UserMessageResponse> _messages = new List<UserMessageResponse>();
+    private readonly MemoryStream _messageAccumulator = new MemoryStream();
+    private Uri _serverUri;
+    private string _input = "";
+
+    //--- Methods ---
+    protected override async Task OnInitializedAsync() {
+        var config = await Http.GetFromJsonAsync<Config>("config.json");
+        _serverUri = new Uri(config.ServerUri);
+        await ReconnectWebSocketAsync();
+        _ = ReceiveLoop();
+    }
+
+    private async Task ReconnectWebSocketAsync() {
+        Console.WriteLine($"Connecting to: {_serverUri}");
+        await _webSocket.ConnectAsync(_serverUri, _disposalTokenSource.Token);
+        Console.WriteLine("Connected!");
+    }
+
+    private void ReceivedMessage(UserMessageResponse message) {
+        if(message.Action == "message") {
+            Console.WriteLine($"Received from {message.From}: {message.Text}");
+            _messages.Add(message);
+
+            // update UI
+            StateHasChanged();
+        } else {
+            Console.WriteLine($"Unrecognized message action: {message.Action}");
+        }
+    }
+
+    private async Task SendMessageAsync() {
+        var json = JsonSerializer.Serialize(new SendMessageRequest {
+            Action = "send",
+            Text = _input
+        });
+        Console.WriteLine($"Sending: {json}");
+        await _webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(json)), WebSocketMessageType.Text, true, _disposalTokenSource.Token);
+        _input = "";
+    }
+
+    private async Task ReceiveLoop() {
+        var buffer = new ArraySegment<byte>(new byte[32 * 1024]);
+        while(!_disposalTokenSource.IsCancellationRequested) {
+            var received = await _webSocket.ReceiveAsync(buffer, _disposalTokenSource.Token);
+            switch(received.MessageType) {
+            case WebSocketMessageType.Close:
+
+                // websocket connection is automatically closed when idle for 10 minutes or
+                // when it has been used for 2 hours
+                if(!_disposalTokenSource.IsCancellationRequested) {
+
+                    // re-open connection while the app is still running
+                    await ReconnectWebSocketAsync();
+                }
+                continue;
+            case WebSocketMessageType.Binary:
+
+                // unsupported content type
+                throw new Exception("unexpected binary payload received");
+
+            case WebSocketMessageType.Text:
+
+                // text message payload may require more than one frame to be received fully
+                _messageAccumulator.Write(buffer.Array, 0, received.Count);
+
+                // check if all bytes of the message have been received
+                if(received.EndOfMessage) {
+
+                    // deserialize received JSON payload
+                    var json = Encoding.UTF8.GetString(_messageAccumulator.GetBuffer(), 0, (int)_messageAccumulator.Position);
+                    var message = JsonSerializer.Deserialize<UserMessageResponse>(json);
+
+                    // reset message accumulator
+                    _messageAccumulator.Position = 0;
+                    _messageAccumulator.SetLength(0);
+                    ReceivedMessage(message);
+                }
+                break;
+            }
+        }
+    }
+
+    void IDisposable.Dispose() {
+        _disposalTokenSource.Cancel();
+        _ = _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Bye", CancellationToken.None);
+    }
+}
