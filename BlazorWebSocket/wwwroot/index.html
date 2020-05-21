@@ -2,7 +2,46 @@
 <html>
 
 <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <title>λ# Chat</title>
+
+    <meta name="theme-color" content="#563d7c">
+
+
+    <style>
+      .bd-placeholder-img {
+        font-size: 1.125rem;
+        text-anchor: middle;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      li.list-group-item {
+        padding: 10px;
+     }
+
+      li.list-group-item p {
+        margin-bottom: 0;
+     }
+
+    label.col-form-label {
+        padding-left: 0;
+    }
+
+     .main .top-row {
+        z-index: 100;
+    }
+
+      @media (min-width: 768px) {
+        .bd-placeholder-img-lg {
+          font-size: 3.5rem;
+        }
+      }
+    </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>WebSockets - Simple chat</title>
     <base href="/" />
@@ -10,14 +49,24 @@
     <link href="css/app.css" rel="stylesheet" />
 </head>
 
-<body>
-    <app>Loading...</app>
-
-    <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="" class="reload">Reload</a>
-        <a class="dismiss">🗙</a>
+<body class="d-flex flex-column h-100">
+    <!-- Begin page content -->
+    <main role="main" class="flex-shrink-0">
+    <div class="container">
+        <app>Loading...</app>
+            <div id="blazor-error-ui">
+                An unhandled error has occurred.
+                <a href="" class="reload">Reload</a>
+                <a class="dismiss">🗙</a>
+            </div>
     </div>
+    </main>
+    <footer class="footer mt-auto py-3">
+      <div class="container">
+          <span class="text-muted">made with ❤️ by λ#</span>
+      </div>
+    </footer>
+
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 

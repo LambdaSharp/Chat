@@ -50,31 +50,45 @@ namespace Demo.WebSocketsChat.NotifyFunction {
         }
 
         public override async Task ProcessMessageAsync(NotifyMessage message) {
-
-            // enumerate open connections
-            var connections = await _table.GetAllRowsAsync();
-            LogInfo($"Announcing to {connections.Count()} open connection(s)");
-
-            // attempt to send message on all open connections
             var messageBytes = Encoding.UTF8.GetBytes(message.Message);
-            var outcomes = await Task.WhenAll(connections.Select(async (connectionId, index) => {
-                LogInfo($"Post to connection {index}: {connectionId}");
+            if(message.ConnectionId != null) {
                 try {
                     await _amaClient.PostToConnectionAsync(new PostToConnectionRequest {
-                        ConnectionId = connectionId,
+                        ConnectionId = message.ConnectionId,
                         Data = new MemoryStream(messageBytes)
                     });
                 } catch(AmazonServiceException e) when(e.StatusCode == System.Net.HttpStatusCode.Gone) {
-                    LogInfo($"Deleting gone connection: {connectionId}");
-                    await _table.DeleteRowAsync(connectionId);
-                    return false;
+                    LogInfo($"Deleting gone connection: {message.ConnectionId}");
+                    await _table.DeleteRowAsync(message.ConnectionId);
                 } catch(Exception e) {
-                    LogErrorAsWarning(e, "PostToConnectionAsync() failed");
-                    return false;
+                    LogErrorAsWarning(e, "PostToConnectionAsync() failed on connection {0}", message.ConnectionId);
                 }
-                return true;
-            }));
-            LogInfo($"Data sent to {outcomes.Count(result => result)} connections");
+            } else {
+
+                // enumerate open connections
+                var connections = await _table.GetAllRowsAsync();
+                LogInfo($"Announcing to {connections.Count()} open connection(s)");
+
+                // attempt to send message on all open connections
+                var outcomes = await Task.WhenAll(connections.Select(async (connectionId, index) => {
+                    LogInfo($"Post to connection {index}: {connectionId}");
+                    try {
+                        await _amaClient.PostToConnectionAsync(new PostToConnectionRequest {
+                            ConnectionId = connectionId,
+                            Data = new MemoryStream(messageBytes)
+                        });
+                    } catch(AmazonServiceException e) when(e.StatusCode == System.Net.HttpStatusCode.Gone) {
+                        LogInfo($"Deleting gone connection: {connectionId}");
+                        await _table.DeleteRowAsync(connectionId);
+                        return false;
+                    } catch(Exception e) {
+                        LogErrorAsWarning(e, "PostToConnectionAsync() failed {0}", message.ConnectionId);
+                        return false;
+                    }
+                    return true;
+                }));
+                LogInfo($"Data sent to {outcomes.Count(result => result)} connections");
+            }
         }
     }
 }

@@ -30,17 +30,41 @@ namespace Demo.WebSocketsChat.Common {
         public string Text { get; set; }
     }
 
-    public class UserMessageResponse {
+    public class RenameUserRequest : AMessageRequest {
 
         //--- Properties ---
-        public string Action { get; } = "message";
+        public string UserName { get; set; }
+    }
+
+    public class NotifyBaseResponse {
+
+        //--- Properties ---
+        public string Action { get; set; }
+    }
+
+    public class UserMessageResponse : NotifyBaseResponse {
+
+        //--- Constructors ---
+        public UserMessageResponse() => Action = "message";
+
+        //--- Properties ---
         public string From { get; set; }
         public string Text { get; set; }
+    }
+
+    public class UserNameResponse : NotifyBaseResponse  {
+
+        //--- Constructors ---
+        public UserNameResponse() => Action = "username";
+
+        //--- Properties ---
+        public string UserName { get; set; }
     }
 
     public class NotifyMessage {
 
         //--- Properties ---
         public string Message { get; set; }
+        public string ConnectionId { get; set; }
     }
 }
