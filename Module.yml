@@ -44,10 +44,13 @@ Items:
     Sources:
       - WebSocket: $connect
         Invoke: OpenConnection
+
       - WebSocket: $disconnect
         Invoke: CloseConnection
+
       - WebSocket: send
         Invoke: SendMessage
+
       - WebSocket: rename
         Invoke : RenameUser
 
@@ -77,10 +80,6 @@ Items:
   - Resource: WebsiteBucket
     Description: S3 bucket for hosting website assets
     Type: AWS::S3::Bucket
-    Properties:
-      WebsiteConfiguration:
-        ErrorDocument: index.html
-        IndexDocument: index.html
 
   - Resource: WebsiteBucketPolicy
     Description: Public access policy
@@ -90,9 +89,10 @@ Items:
         Id: WebsiteBucket
         Version: 2012-10-17
         Statement:
-          - Sid: PublicReadForGetBucketObjects
+          - Sid: AllowCloudFrontAccess
             Effect: Allow
-            Principal: '*'
+            Principal:
+              AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${WebsiteCloudFrontIdentity}"
             Action: s3:GetObject
             Resource: !Sub "${WebsiteBucket.Arn}/*"
       Bucket: !Ref WebsiteBucket
@@ -110,52 +110,51 @@ Items:
       DestinationBucket: !Ref WebsiteBucket
       DestinationKey: ""
 
-  # - Resource: WebsiteCloudFront
-  #   Description: CloudFront distribution for https:// web access to the S3 bucket
-  #   Type: AWS::CloudFront::Distribution
-  #   DependsOn:
-  #     - WebsiteBucket
-  #   Properties:
-  #     DistributionConfig:
-  #       Comment: CloudFront Distribution pointing to the S3 bucket
-  #       Origins:
-  #         - DomainName: !GetAtt WebsiteBucket.DomainName
-  #           Id: S3Origin
-  #           CustomOriginConfig:
-  #             HTTPPort: 80
-  #             HTTPSPort: 443
-  #             OriginProtocolPolicy: http-only
-  #       Enabled: true
-  #       HttpVersion: http2
-  #       DefaultRootObject: index.html
-  #       DefaultCacheBehavior:
-  #         AllowedMethods:
-  #           - GET
-  #           - HEAD
-  #         Compress: true
-  #         DefaultTTL: 0
-  #         TargetOriginId: S3Origin
-  #         ForwardedValues:
-  #           QueryString: true
-  #           Cookies:
-  #             Forward: none
-  #         MinTTL: 0
-  #         ViewerProtocolPolicy: redirect-to-https
-  #       PriceClass: PriceClass_100
+  - Resource: WebsiteCloudFront
+    Description: CloudFront distribution for https:// web access to the S3 bucket
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: CloudFront Distribution pointing to the S3 bucket
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt WebsiteBucket.DomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${WebsiteCloudFrontIdentity}"
+        Enabled: true
+        HttpVersion: http2
+        DefaultRootObject: index.html
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          DefaultTTL: 0
+          TargetOriginId: S3Origin
+          ForwardedValues:
+            QueryString: true
+            Cookies:
+              Forward: none
+          MinTTL: 0
+          ViewerProtocolPolicy: redirect-to-https
+        PriceClass: PriceClass_100
+    DependsOn: WebsiteBucketPolicy
+
+  - Resource: WebsiteCloudFrontIdentity
+    Description: CloudFront Origin Identity for authenticating distribution with the S3 bucket
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: ""
 
   # Export website url
 
-  # - Variable: WebsiteUrl
-  #   Description: Website URL
-  #   Scope: public
-  #   Value: !Sub "https://${WebsiteCloudFront.DomainName}/"
+  - Variable: WebsiteUrl
+    Description: Website URL
+    Scope: public
+    Value: !Sub "https://${WebsiteCloudFront.DomainName}/"
 
   - Variable: WebSocketUrl
     Description: WebSocket URL
     Scope: public
     Value: !Ref Module::WebSocket::Url
-
-  - Variable: WebsiteUrl
-    Description: Website URL
-    Scope: public
-    Value: !GetAtt WebsiteBucket.WebsiteURL

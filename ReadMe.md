@@ -66,14 +66,16 @@ The following happens when the module is deployed.
 1. Create a DynamoDB table to track open connections.
 1. Deploy the `ChatFunction` to handle web-socket requests.
 1. Deploy `NotifyFunction` to broadcast messages to all open connections.
-1. Create an S3 bucket configured to host a website.
-1. Create a bucket policy to allow for public access.
+1. Create a private S3 bucket.
+1. Create a bucket policy to CloudFront access.
 1. Create a `config.json` file with the websocket URL.
 1. Copy the `wwwroot` files to the S3 bucket.
-1. Create CloudFront distribution to enable https:// access to the S3-hosted website _(NOTE: this can take 20 minutes to deploy!)_
-1. Create an SQS queue to web-socket notifications.
+1. Create CloudFront distribution to enable https:// access to the S3-hosted website
+1. Create an SQS queue to buffer web-socket notifications.
 1. Show the website URL.
 1. Show the websocket URL.
+
+> **NOTE:** Creating the CloudFront distribution takes up to 5 minutes. Granting permission to CloudFront to access the private S3 bucket can take up to an hour!
 
 ## Other Resources
 
@@ -81,13 +83,29 @@ The following site allows direct interactions with the WebSocket end-point using
 
 https://www.websocket.org/echo.html
 
-The websocket payload is a JSON document with the following format:
+This JSON message sends a _"Hello World!"_ notification to all participants:
 ```json
 {
     "Action": "send",
-    "Text": "<message>"
+    "Text": "Hello World!"
 }
 ```
+
+This JSON message changes the user name to _Bob_ for the current user:
+```json
+{
+    "Action": "rename",
+    "UserName": "Bob"
+}
+```
+
+## Future Improvements
+- [x] Allow users to rename themselves.
+- [x] Remember a user's name from a previous session using local storage.
+- [x] Restrict access to S3 bucket to only allow CloudFront.
+- [ ] Show previous messages when a user connects.
+- [ ] Allow users to create or join chat rooms.
+- [ ] Route API Gateway WebSocket requests via CloudFront.
 
 ## Acknowledgements
 
