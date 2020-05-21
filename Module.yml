@@ -144,17 +144,18 @@ Items:
         PriceClass: PriceClass_100
 
   # Export website url
-  - Variable: WebsiteUrl
-    Description: Website URL
-    Scope: public
-    Value: !Sub "https://${WebsiteCloudFront.DomainName}/"
+
+  # - Variable: WebsiteUrl
+  #   Description: Website URL
+  #   Scope: public
+  #   Value: !Sub "https://${WebsiteCloudFront.DomainName}/"
 
   - Variable: WebSocketUrl
     Description: WebSocket URL
     Scope: public
     Value: !Ref Module::WebSocket::Url
 
-  - Variable: WebsiteUrlBucket
+  - Variable: WebsiteUrl
     Description: Website URL
     Scope: public
     Value: !GetAtt WebsiteBucket.WebsiteURL
