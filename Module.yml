@@ -48,6 +48,8 @@ Items:
         Invoke: CloseConnection
       - WebSocket: send
         Invoke: SendMessage
+      - WebSocket: rename
+        Invoke : RenameUser
 
   # Create function for sending response to web-sockets
   - Function: NotifyFunction
@@ -151,3 +153,8 @@ Items:
     Description: WebSocket URL
     Scope: public
     Value: !Ref Module::WebSocket::Url
+
+  - Variable: WebsiteUrlBucket
+    Description: Website URL
+    Scope: public
+    Value: !GetAtt WebsiteBucket.WebsiteURL

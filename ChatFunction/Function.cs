@@ -63,6 +63,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
                 UserName = username ?? $"Anonymous-{RandomString(6)}"
             };
             await _table.PutRowAsync(CurrentUser);
+            await NotifyUserNameAsync(request.RequestContext.ConnectionId, CurrentUser.UserName);
             await NotifyAllAsync("#host", $"{CurrentUser.UserName} joined");
         }
 
@@ -80,12 +81,38 @@ namespace Demo.WebSocketsChat.ChatFunction {
             await NotifyAllAsync(CurrentUser.UserName, request.Text);
         }
 
+        public async Task RenameUserAsync(RenameUserRequest request) {
+            if(
+                string.IsNullOrEmpty(request.UserName)
+                || request.UserName.StartsWith("#", StringComparison.Ordinal)
+            ) {
+                return;
+            }
+            CurrentUser = await _table.GetRowAsync<ConnectionUser>(CurrentRequest.RequestContext.ConnectionId);
+            var oldName = CurrentUser.UserName;
+            CurrentUser.UserName = request.UserName;
+            await _table.PutRowAsync(CurrentUser);
+            await NotifyAllAsync("#host", $"{oldName} is now known as {CurrentUser.UserName}");
+        }
+
         private async Task NotifyAllAsync(string username, string message) {
             await _sqsClient.SendMessageAsync(new Amazon.SQS.Model.SendMessageRequest {
                 MessageBody = LambdaSerializer.Serialize(new NotifyMessage {
                     Message = LambdaSerializer.Serialize(new UserMessageResponse {
                         From = username,
                         Text = message
+                    })
+                }),
+                QueueUrl = _notifyQueueUrl
+            });
+        }
+
+        private async Task NotifyUserNameAsync(string connectionId, string userName) {
+            await _sqsClient.SendMessageAsync(new Amazon.SQS.Model.SendMessageRequest {
+                MessageBody = LambdaSerializer.Serialize(new NotifyMessage {
+                    ConnectionId = connectionId,
+                    Message = LambdaSerializer.Serialize(new UserNameResponse {
+                        UserName = userName
                     })
                 }),
                 QueueUrl = _notifyQueueUrl

@@ -7,28 +7,52 @@
 @using System.Threading
 @using Demo.WebSocketsChat.Common
 
-
 @implements IDisposable
 
 @inject HttpClient Http
-
-<h1>WebSockets - Simple Chat</h1>
-<h3>State: @_webSocket.State</h3>
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 
 @if(_webSocket.State == WebSocketState.Open) {
-    <form @onsubmit="SendMessageAsync">
-        Message: <input @bind="@_input" />
-        <button type="submit">Send</button>
+    <form @onsubmit="RenameUserAsync">
+        <label for="userName" class="col-sm-3 col-form-label">User Name</label>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="basic-addon1">🤓</span>
+            </div>
+            <input type="text" class="form-control" aria-label="Username" aria-describedby="basic-addon1" id="userName" @bind="@UserName" />
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-secondary">Submit</button>
+            </div>
+        </div>
     </form>
+    <form @onsubmit="SendMessageAsync">
+        <label for="sendMessage" class="col-sm-3 col-form-label"></label>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="basic-addon1">💬</span>
+            </div>
+            <input type="text" placeholder="Message" class="form-control" aria-label="SendMessage" aria-describedby="basic-addon1" id="sendMessage" @bind="@ChatMessage" />
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-primary">Send</button>
+            </div>
+        </div>
+    </form>
+    <br />
     <div>
-        @foreach(var message in Enumerable.Reverse(_messages)) {
-            @if(message.From == "#host") {
-                <p>@DateTimeOffset.UtcNow.ToString("HH:mm"): @message.Text</p>
-            } else {
-                <p><span style="color:blue">@message.From</span> @DateTimeOffset.UtcNow.ToString("HH:mm"): @message.Text</p>
+        <ul class="list-group">
+            @foreach(var message in Enumerable.Reverse(_messages).Select((x, i) => new { Value = x, Index = i })) {
+                <li class=@string.Format("list-group-item {0}", (message.Index % 2 == 0) ? "list-group-item-secondary" : "list-group-item-light")>
+                    @if(message.Value.From == "#host") {
+                        <p><span style="color:blue">Host </span> <small class="text-muted">@DateTimeOffset.UtcNow.ToString("HH:mm")</small> <br />@message.Value.Text</p>
+                    } else {
+                        <p><span style="color:maroon">@message.Value.From</span> <small class="text-muted">@DateTimeOffset.UtcNow.ToString("HH:mm")</small> <br />@message.Value.Text</p>
+                    }
+                </li>
             }
-        }
+        </ul>
     </div>
+} else {
+    <h3>Connecting...</h3>
 }
 
 @code {
@@ -46,42 +70,76 @@
     private readonly List<UserMessageResponse> _messages = new List<UserMessageResponse>();
     private readonly MemoryStream _messageAccumulator = new MemoryStream();
     private Uri _serverUri;
-    private string _input = "";
+
+    //--- Properties ---
+    private string ChatMessage { get; set; }
+    private string UserName { get; set; }
 
     //--- Methods ---
     protected override async Task OnInitializedAsync() {
         var config = await Http.GetFromJsonAsync<Config>("config.json");
         _serverUri = new Uri(config.ServerUri);
+
+        // attempt to restore user name from browser local storage
+        var userName = await LocalStorage.GetItemAsync<string>("UserName");
+        if(!string.IsNullOrEmpty(userName)) {
+            Console.WriteLine($"Restored UserName from LocalStorage: {userName}");
+            UserName = userName;
+        } else {
+            Console.WriteLine($"No previous UserName found");
+        }
+
+        // attempt to connect to server
         await ReconnectWebSocketAsync();
         _ = ReceiveLoop();
     }
 
     private async Task ReconnectWebSocketAsync() {
-        Console.WriteLine($"Connecting to: {_serverUri}");
-        await _webSocket.ConnectAsync(_serverUri, _disposalTokenSource.Token);
+        if(!string.IsNullOrEmpty(UserName)) {
+            var uri = $"{_serverUri}?username={Uri.EscapeUriString(UserName)}";
+            Console.WriteLine($"Connecting to: {uri}");
+            await _webSocket.ConnectAsync(new Uri(uri), _disposalTokenSource.Token);
+        } else {
+            Console.WriteLine($"Connecting to: {_serverUri}");
+            await _webSocket.ConnectAsync(_serverUri, _disposalTokenSource.Token);
+        }
         Console.WriteLine("Connected!");
     }
 
     private void ReceivedMessage(UserMessageResponse message) {
-        if(message.Action == "message") {
-            Console.WriteLine($"Received from {message.From}: {message.Text}");
-            _messages.Add(message);
+        Console.WriteLine($"Received from {message.From}: {message.Text}");
+        _messages.Add(message);
+        StateHasChanged();
+    }
 
-            // update UI
-            StateHasChanged();
+    private async Task ReceivedUserNameAsync(UserNameResponse username) {
+        Console.WriteLine($"Received UserName: {username.UserName}");
+        if(!string.IsNullOrEmpty(UserName) && (UserName != username.UserName)) {
+            await RenameUserAsync();
         } else {
-            Console.WriteLine($"Unrecognized message action: {message.Action}");
+            UserName = username.UserName;
+            StateHasChanged();
         }
     }
 
     private async Task SendMessageAsync() {
         var json = JsonSerializer.Serialize(new SendMessageRequest {
             Action = "send",
-            Text = _input
+            Text = ChatMessage
         });
         Console.WriteLine($"Sending: {json}");
         await _webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(json)), WebSocketMessageType.Text, true, _disposalTokenSource.Token);
-        _input = "";
+        ChatMessage = "";
+    }
+
+    private async Task RenameUserAsync() {
+        await LocalStorage.SetItemAsync("UserName", UserName);
+        var json = JsonSerializer.Serialize(new RenameUserRequest {
+            Action = "rename",
+            UserName = UserName
+        });
+        Console.WriteLine($"Sending: {json}");
+        await _webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(json)), WebSocketMessageType.Text, true, _disposalTokenSource.Token);
     }
 
     private async Task ReceiveLoop() {
@@ -112,14 +170,26 @@
                 // check if all bytes of the message have been received
                 if(received.EndOfMessage) {
 
-                    // deserialize received JSON payload
+                    // convert accumulated messages into JSON string
                     var json = Encoding.UTF8.GetString(_messageAccumulator.GetBuffer(), 0, (int)_messageAccumulator.Position);
-                    var message = JsonSerializer.Deserialize<UserMessageResponse>(json);
-
-                    // reset message accumulator
                     _messageAccumulator.Position = 0;
                     _messageAccumulator.SetLength(0);
-                    ReceivedMessage(message);
+
+                    // deserialize into base response class
+                    var response = JsonSerializer.Deserialize<NotifyBaseResponse>(json);
+                    switch(response.Action) {
+                    case "message":
+
+                        // reset message accumulator
+                        ReceivedMessage(JsonSerializer.Deserialize<UserMessageResponse>(json));
+                        break;
+                    case "username":
+                        await ReceivedUserNameAsync(JsonSerializer.Deserialize<UserNameResponse>(json));
+                        break;
+                    default:
+                        Console.WriteLine($"Unrecognized message: {json}");
+                        break;
+                    }
                 }
                 break;
             }

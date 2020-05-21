@@ -8,6 +8,8 @@ This LambdaSharp module creates a web chat front-end using [ASP.NET Core Blazor 
 
 > **NOTE:** This LambdaSharp module requires .NET Core 3.1.300 and LambdaSharp.Tool 0.8, or later.
 
+![WebChat](Assets/LambdaSharpWebChat.png)
+
 ## Deploy Module
 
 This module is compiled to CloudFormation and deployed using the LambdaSharp CLI.
