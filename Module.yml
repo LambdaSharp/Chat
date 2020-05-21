@@ -110,38 +110,38 @@ Items:
       DestinationBucket: !Ref WebsiteBucket
       DestinationKey: ""
 
-  - Resource: WebsiteCloudFront
-    Description: CloudFront distribution for https:// web access to the S3 bucket
-    Type: AWS::CloudFront::Distribution
-    DependsOn:
-      - WebsiteBucket
-    Properties:
-      DistributionConfig:
-        Comment: CloudFront Distribution pointing to the S3 bucket
-        Origins:
-          - DomainName: !GetAtt WebsiteBucket.DomainName
-            Id: S3Origin
-            CustomOriginConfig:
-              HTTPPort: 80
-              HTTPSPort: 443
-              OriginProtocolPolicy: http-only
-        Enabled: true
-        HttpVersion: http2
-        DefaultRootObject: index.html
-        DefaultCacheBehavior:
-          AllowedMethods:
-            - GET
-            - HEAD
-          Compress: true
-          DefaultTTL: 0
-          TargetOriginId: S3Origin
-          ForwardedValues:
-            QueryString: true
-            Cookies:
-              Forward: none
-          MinTTL: 0
-          ViewerProtocolPolicy: redirect-to-https
-        PriceClass: PriceClass_100
+  # - Resource: WebsiteCloudFront
+  #   Description: CloudFront distribution for https:// web access to the S3 bucket
+  #   Type: AWS::CloudFront::Distribution
+  #   DependsOn:
+  #     - WebsiteBucket
+  #   Properties:
+  #     DistributionConfig:
+  #       Comment: CloudFront Distribution pointing to the S3 bucket
+  #       Origins:
+  #         - DomainName: !GetAtt WebsiteBucket.DomainName
+  #           Id: S3Origin
+  #           CustomOriginConfig:
+  #             HTTPPort: 80
+  #             HTTPSPort: 443
+  #             OriginProtocolPolicy: http-only
+  #       Enabled: true
+  #       HttpVersion: http2
+  #       DefaultRootObject: index.html
+  #       DefaultCacheBehavior:
+  #         AllowedMethods:
+  #           - GET
+  #           - HEAD
+  #         Compress: true
+  #         DefaultTTL: 0
+  #         TargetOriginId: S3Origin
+  #         ForwardedValues:
+  #           QueryString: true
+  #           Cookies:
+  #             Forward: none
+  #         MinTTL: 0
+  #         ViewerProtocolPolicy: redirect-to-https
+  #       PriceClass: PriceClass_100
 
   # Export website url
 
