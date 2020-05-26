@@ -99,7 +99,7 @@ Items:
     DependsOn: DeployWebsiteFiles
 
   - Package: WebsiteFiles
-    Build: dotnet publish -c Release BlazorWebSocket
+    Build: dotnet publish -c Release BlazorWebSocket -p:BlazorEnableCompression=false
     Files: BlazorWebSocket/bin/Release/netstandard2.1/publish/wwwroot/
 
   - Resource: DeployWebsiteFiles
