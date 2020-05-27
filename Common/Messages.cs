@@ -36,13 +36,13 @@ namespace Demo.WebSocketsChat.Common {
         public string UserName { get; set; }
     }
 
-    public class NotifyBaseResponse {
+    public class NotifyResponse {
 
         //--- Properties ---
         public string Action { get; set; }
     }
 
-    public class UserMessageResponse : NotifyBaseResponse {
+    public class UserMessageResponse : NotifyResponse {
 
         //--- Constructors ---
         public UserMessageResponse() => Action = "message";
@@ -52,7 +52,7 @@ namespace Demo.WebSocketsChat.Common {
         public string Text { get; set; }
     }
 
-    public class UserNameResponse : NotifyBaseResponse  {
+    public class UserNameResponse : NotifyResponse  {
 
         //--- Constructors ---
         public UserNameResponse() => Action = "username";

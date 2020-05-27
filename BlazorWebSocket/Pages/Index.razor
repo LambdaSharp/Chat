@@ -176,7 +176,7 @@
                     _messageAccumulator.SetLength(0);
 
                     // deserialize into base response class
-                    var response = JsonSerializer.Deserialize<NotifyBaseResponse>(json);
+                    var response = JsonSerializer.Deserialize<NotifyResponse>(json);
                     switch(response.Action) {
                     case "message":
 

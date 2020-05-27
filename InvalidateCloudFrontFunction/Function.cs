@@ -30,27 +30,38 @@ namespace Demo.WebSocketsChat.InvalidateCloudFrontFunction {
 
         //--- Fields ---
         private IAmazonCloudFront _cloudfrontClient;
-        private string _distributionId;
+        private string _cloudfrontDistributionId;
 
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
-            _distributionId = config.ReadText("WebsiteCloudFront");
+
+            // read configuration settings
+            _cloudfrontDistributionId = config.ReadText("WebsiteCloudFront");
+
+            // initialize AWS clients
             _cloudfrontClient = new AmazonCloudFrontClient();
         }
 
         public override async Task<string> ProcessMessageAsync(S3Event request) {
+
+            // convert S3 keys to CloudFront paths for affected objects
             var paths = request.Records.Select(record => "/" + record.S3.Object.Key).ToList();
+
+            // use Amazon Request ID from first record to uniquely identify the invalidation request
+            var callerReference = request.Records.First().ResponseElements.XAmzRequestId;
+
+            // batch invalidate CloudFront paths
             await _cloudfrontClient.CreateInvalidationAsync(new CreateInvalidationRequest {
-                DistributionId = _distributionId,
+                DistributionId = _cloudfrontDistributionId,
                 InvalidationBatch = new InvalidationBatch {
-                    CallerReference = request.Records.First().ResponseElements.XAmzRequestId,
+                    CallerReference = callerReference,
                     Paths = new Paths {
                         Items = paths,
                         Quantity = paths.Count
                     }
                 }
             });
-            LogInfo($"invalidated {paths.Count:N0} CloudFront paths:\n{string.Join("\n", paths)}");
+            LogInfo($"Invalidated {paths.Count:N0} CloudFront paths:\n{string.Join("\n", paths)}");
             return "Ok";
         }
     }

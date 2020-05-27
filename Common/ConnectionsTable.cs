@@ -71,6 +71,7 @@ namespace Demo.WebSocketsChat.Common {
                 .Select(item => item["ConnectionId"].S)
                 .ToList();
         }
+
         public Task DeleteRowAsync(string id) => _table.DeleteItemAsync(id);
     }
 }
