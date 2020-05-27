@@ -109,6 +109,7 @@ Items:
       SourceKey: !Ref WebsiteFiles
       DestinationBucket: !Ref WebsiteBucket
       DestinationKey: ""
+      Encoding: BROTLI
 
   - Resource: WebsiteCloudFront
     Description: CloudFront distribution for https:// web access to the S3 bucket
