@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Amazon.CloudFront;

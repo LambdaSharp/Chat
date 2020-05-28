@@ -36,7 +36,7 @@ Items:
         - AttributeName: ConnectionId
           KeyType: HASH
 
-  # Create function for web-socket requests
+  # Function for handling web-socket requests
   - Function: ChatFunction
     Description: Handle web-socket messages
     Memory: 256
@@ -54,7 +54,7 @@ Items:
       - WebSocket: rename
         Invoke : RenameUser
 
-  # Create function for sending response to web-sockets
+  # Function for sending response to web-sockets
   - Function: NotifyFunction
     Description: Notify all web-sockets
     Memory: 256
@@ -76,13 +76,13 @@ Items:
       Contents:
         ServerUri: !Ref WebSocketUrl
 
-  # Create bucket to host website
+  # Bucket to host website
   - Resource: WebsiteBucket
     Description: S3 bucket for hosting website assets
     Type: AWS::S3::Bucket
 
   - Resource: WebsiteBucketPolicy
-    Description: Public access policy
+    Description: CloudFront-only access policy
     Type: AWS::S3::BucketPolicy
     Properties:
       PolicyDocument:
@@ -162,8 +162,8 @@ Items:
     Sources:
       - S3: WebsiteBucket
         Events:
-          - "s3:ObjectCreated:*"
-          - "s3:ObjectRemoved:*"
+          - s3:ObjectCreated:*
+          - s3:ObjectRemoved:*
 
   # Export website url
   - Variable: WebsiteUrl
