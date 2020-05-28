@@ -1,10 +1,6 @@
 @page "/"
 
 @using System.Net.WebSockets
-@using System.IO;
-@using System.Text
-@using System.Text.Json
-@using System.Threading
 @using Demo.WebSocketsChat.Common
 
 @implements IDisposable
@@ -12,7 +8,7 @@
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 
-@if(_webSocket.State == WebSocketState.Open) {
+@if(_websocketDispatch.State == WebSocketState.Open) {
     <form @onsubmit="RenameUserAsync">
         <label for="userName" class="col-sm-3 col-form-label">User Name</label>
         <div class="input-group mb-3">
@@ -65,15 +61,17 @@
     }
 
     //--- Fields ---
-    private readonly CancellationTokenSource _disposalTokenSource = new CancellationTokenSource();
-    private readonly ClientWebSocket _webSocket = new ClientWebSocket();
     private readonly List<UserMessageResponse> _messages = new List<UserMessageResponse>();
-    private readonly MemoryStream _messageAccumulator = new MemoryStream();
+    private readonly WebSocketDispatch _websocketDispatch = new WebSocketDispatch();
     private Uri _serverUri;
 
     //--- Properties ---
     private string ChatMessage { get; set; }
     private string UserName { get; set; }
+
+    private Uri ServerUri => string.IsNullOrEmpty(UserName)
+        ? _serverUri
+        : new Uri($"{_serverUri}?username={Uri.EscapeUriString(UserName)}");
 
     //--- Methods ---
     protected override async Task OnInitializedAsync() {
@@ -89,21 +87,13 @@
             Console.WriteLine($"No previous UserName found");
         }
 
-        // attempt to connect to server
-        await ReconnectWebSocketAsync();
-        _ = ReceiveLoop();
-    }
+        // configure WebSocket
+        _websocketDispatch.RegisterAction<UserMessageResponse>("message", ReceivedMessage);
+        _websocketDispatch.RegisterAction<UserNameResponse>("username", ReceivedUserName);
 
-    private async Task ReconnectWebSocketAsync() {
-        if(!string.IsNullOrEmpty(UserName)) {
-            var uri = $"{_serverUri}?username={Uri.EscapeUriString(UserName)}";
-            Console.WriteLine($"Connecting to: {uri}");
-            await _webSocket.ConnectAsync(new Uri(uri), _disposalTokenSource.Token);
-        } else {
-            Console.WriteLine($"Connecting to: {_serverUri}");
-            await _webSocket.ConnectAsync(_serverUri, _disposalTokenSource.Token);
-        }
-        Console.WriteLine("Connected!");
+        // attempt to connect to server
+        _websocketDispatch.ServerUri = ServerUri;
+        await _websocketDispatch.Connect();
     }
 
     private void ReceivedMessage(UserMessageResponse message) {
@@ -112,92 +102,28 @@
         StateHasChanged();
     }
 
-    private async Task ReceivedUserNameAsync(UserNameResponse username) {
+    private void ReceivedUserName(UserNameResponse username) {
         Console.WriteLine($"Received UserName: {username.UserName}");
-        if(!string.IsNullOrEmpty(UserName) && (UserName != username.UserName)) {
-            await RenameUserAsync();
-        } else {
-            UserName = username.UserName;
-            StateHasChanged();
-        }
+        UserName = username.UserName;
+        _websocketDispatch.ServerUri = ServerUri;
+        StateHasChanged();
     }
 
     private async Task SendMessageAsync() {
-        var json = JsonSerializer.Serialize(new SendMessageRequest {
+        await _websocketDispatch.SendMessageAsync(new SendMessageRequest {
             Action = "send",
             Text = ChatMessage
         });
-        Console.WriteLine($"Sending: {json}");
-        await _webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(json)), WebSocketMessageType.Text, true, _disposalTokenSource.Token);
         ChatMessage = "";
     }
 
     private async Task RenameUserAsync() {
-        await LocalStorage.SetItemAsync("UserName", UserName);
-        var json = JsonSerializer.Serialize(new RenameUserRequest {
+        await _websocketDispatch.SendMessageAsync(new RenameUserRequest {
             Action = "rename",
             UserName = UserName
         });
-        Console.WriteLine($"Sending: {json}");
-        await _webSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(json)), WebSocketMessageType.Text, true, _disposalTokenSource.Token);
     }
 
-    private async Task ReceiveLoop() {
-        var buffer = new ArraySegment<byte>(new byte[32 * 1024]);
-        while(!_disposalTokenSource.IsCancellationRequested) {
-            var received = await _webSocket.ReceiveAsync(buffer, _disposalTokenSource.Token);
-            switch(received.MessageType) {
-            case WebSocketMessageType.Close:
-
-                // websocket connection is automatically closed when idle for 10 minutes or
-                // when it has been used for 2 hours
-                if(!_disposalTokenSource.IsCancellationRequested) {
-
-                    // re-open connection while the app is still running
-                    await ReconnectWebSocketAsync();
-                }
-                continue;
-            case WebSocketMessageType.Binary:
-
-                // unsupported content type
-                throw new Exception("unexpected binary payload received");
-
-            case WebSocketMessageType.Text:
-
-                // text message payload may require more than one frame to be received fully
-                _messageAccumulator.Write(buffer.Array, 0, received.Count);
-
-                // check if all bytes of the message have been received
-                if(received.EndOfMessage) {
-
-                    // convert accumulated messages into JSON string
-                    var json = Encoding.UTF8.GetString(_messageAccumulator.GetBuffer(), 0, (int)_messageAccumulator.Position);
-                    _messageAccumulator.Position = 0;
-                    _messageAccumulator.SetLength(0);
-
-                    // deserialize into base response class
-                    var response = JsonSerializer.Deserialize<NotifyResponse>(json);
-                    switch(response.Action) {
-                    case "message":
-
-                        // reset message accumulator
-                        ReceivedMessage(JsonSerializer.Deserialize<UserMessageResponse>(json));
-                        break;
-                    case "username":
-                        await ReceivedUserNameAsync(JsonSerializer.Deserialize<UserNameResponse>(json));
-                        break;
-                    default:
-                        Console.WriteLine($"Unrecognized message: {json}");
-                        break;
-                    }
-                }
-                break;
-            }
-        }
-    }
-
-    void IDisposable.Dispose() {
-        _disposalTokenSource.Cancel();
-        _ = _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Bye", CancellationToken.None);
-    }
+    //--- IDisposable Members ---
+    void IDisposable.Dispose() => _websocketDispatch.Dispose();
 }
