@@ -118,6 +118,7 @@
     }
 
     private async Task RenameUserAsync() {
+        await LocalStorage.SetItemAsync("UserName", UserName);
         await _websocketDispatch.SendMessageAsync(new RenameUserRequest {
             Action = "rename",
             UserName = UserName
