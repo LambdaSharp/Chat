@@ -6,7 +6,7 @@
 
 This LambdaSharp module creates a web chat front-end using [ASP.NET Core Blazor WebAssembly](https://docs.microsoft.com/en-us/aspnet/core/blazor/get-started) and back-end using [API Gateway V2 WebSocket](https://aws.amazon.com/blogs/compute/announcing-websocket-apis-in-amazon-api-gateway/) as self-contained CloudFormation template. The front-end is served by an S3 bucket and secured by a CloudFront distribution. The front-end code is delivered as [WebAssembly](https://webassembly.org/) using ASP.NET Core Blazor. The back-end uses API Gateway V2 WebSocket to facilitate communication between clients. The code and assets for the front-end are built by `dotnet` and then copied to the S3 bucket during deployment. Afterwards, a CloudFront distribution is created to provide secure access over `https://` to the front-end. Finally, an API Gateway V2 WebSocket is deployed with two Lambda functions that handle WebSocket connections and message notifications.
 
-> **NOTE:** This LambdaSharp module requires .NET Core 3.1.300 and LambdaSharp.Tool 0.8, or later.
+> **NOTE:** This LambdaSharp module requires .NET Core 3.1.300 and LambdaSharp.Tool 0.8.0.2, or later.
 
 ![WebChat](Assets/LambdaSharpWebChat.png)
 
@@ -66,14 +66,16 @@ The following happens when the module is deployed.
 1. Create a DynamoDB table to track open connections.
 1. Deploy the `ChatFunction` to handle web-socket requests.
 1. Deploy `NotifyFunction` to broadcast messages to all open connections.
-1. Create an S3 bucket configured to host a website.
-1. Create a bucket policy to allow for public access.
+1. Create a private S3 bucket.
+1. Create a bucket policy to CloudFront access.
 1. Create a `config.json` file with the websocket URL.
-1. Copy the `wwwroot` files to the S3 bucket.
-1. Create CloudFront distribution to enable https:// access to the S3-hosted website _(NOTE: this can take 20 minutes to deploy!)_
-1. Create an SQS queue to web-socket notifications.
+1. Copy the `wwwroot` files to the S3 bucket using [brotli compression](https://en.wikipedia.org/wiki/Brotli).
+1. Create CloudFront distribution to enable https:// access to the S3-hosted website
+1. Create an SQS queue to buffer web-socket notifications.
 1. Show the website URL.
 1. Show the websocket URL.
+
+> **NOTE:** Creating the CloudFront distribution takes up to 5 minutes. Granting permission to CloudFront to access the private S3 bucket can take up to an hour!
 
 ## Other Resources
 
@@ -81,13 +83,29 @@ The following site allows direct interactions with the WebSocket end-point using
 
 https://www.websocket.org/echo.html
 
-The websocket payload is a JSON document with the following format:
+This JSON message sends a _"Hello World!"_ notification to all participants:
 ```json
 {
     "Action": "send",
-    "Text": "<message>"
+    "Text": "Hello World!"
 }
 ```
+
+This JSON message changes the user name to _Bob_ for the current user:
+```json
+{
+    "Action": "rename",
+    "UserName": "Bob"
+}
+```
+
+## Future Improvements
+- [x] Allow users to rename themselves.
+- [x] Remember a user's name from a previous session using local storage.
+- [x] Restrict access to S3 bucket to only allow CloudFront.
+- [ ] Show previous messages when a user connects.
+- [ ] Allow users to create or join chat rooms.
+- [ ] Route API Gateway WebSocket requests via CloudFront.
 
 ## Acknowledgements
 

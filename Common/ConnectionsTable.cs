@@ -1,6 +1,6 @@
 ﻿/*
  * LambdaSharp (λ#)
- * Copyright (C) 2018-2019
+ * Copyright (C) 2018-2020
  * lambdasharp.net
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,6 +71,7 @@ namespace Demo.WebSocketsChat.Common {
                 .Select(item => item["ConnectionId"].S)
                 .ToList();
         }
+
         public Task DeleteRowAsync(string id) => _table.DeleteItemAsync(id);
     }
 }

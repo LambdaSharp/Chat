@@ -1,6 +1,6 @@
 /*
  * LambdaSharp (λ#)
- * Copyright (C) 2018-2019
+ * Copyright (C) 2018-2020
  * lambdasharp.net
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +21,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.Lambda.APIGatewayEvents;
-using Amazon.Lambda.Core;
 using Amazon.SQS;
 using LambdaSharp;
 using LambdaSharp.ApiGateway;
@@ -48,75 +47,105 @@ namespace Demo.WebSocketsChat.ChatFunction {
 
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
+
+            // read configuration settings
+            var connectionsTableName = config.ReadDynamoDBTableName("ConnectionsTable");
+            _notifyQueueUrl = config.ReadSqsQueueUrl("NotifyQueue");
+
+            // initialize AWS clients
             _table = new ConnectionsTable(
-                config.ReadDynamoDBTableName("ConnectionsTable"),
+                connectionsTableName,
                 new AmazonDynamoDBClient()
             );
-            _notifyQueueUrl = config.ReadSqsQueueUrl("NotifyQueue");
             _sqsClient = new AmazonSQSClient();
         }
 
         public async Task OpenConnectionAsync(APIGatewayProxyRequest request, string username = null) {
             LogInfo($"Connected: {request.RequestContext.ConnectionId}");
+
+            // create new connection record with custom or random name
             CurrentUser = new ConnectionUser {
                 ConnectionId = request.RequestContext.ConnectionId,
                 UserName = username ?? $"Anonymous-{RandomString(6)}"
             };
             await _table.PutRowAsync(CurrentUser);
+
+            // notify new connection with assigned user name
             await NotifyUserNameAsync(request.RequestContext.ConnectionId, CurrentUser.UserName);
+
+            // notify all connections about user who joined
             await NotifyAllAsync("#host", $"{CurrentUser.UserName} joined");
         }
 
         public async Task CloseConnectionAsync(APIGatewayProxyRequest request) {
             LogInfo($"Disconnected: {request.RequestContext.ConnectionId}");
+
+            // fetch user record associated with this connection
             CurrentUser = await _table.GetRowAsync<ConnectionUser>(CurrentRequest.RequestContext.ConnectionId);
             if(CurrentUser != null) {
+
+                // remove connection record
                 await _table.DeleteRowAsync(CurrentUser.ConnectionId);
+
+                // notify all connections about user who left
                 await NotifyAllAsync("#host", $"{CurrentUser.UserName} left");
             }
         }
 
         public async Task SendMessageAsync(SendMessageRequest request) {
+
+            // NOTE: this method is invoked by messages with the "send" route key
+
+            // fetch user record associated with this connection
             CurrentUser = await _table.GetRowAsync<ConnectionUser>(CurrentRequest.RequestContext.ConnectionId);
+
+            // notify all connections about new message
             await NotifyAllAsync(CurrentUser.UserName, request.Text);
         }
 
         public async Task RenameUserAsync(RenameUserRequest request) {
+
+            // NOTE: this method is invoked by messages with the "rename" route key
+
+            // validate requested username
+            var username = request.UserName?.Trim() ?? "";
             if(
-                string.IsNullOrEmpty(request.UserName)
-                || request.UserName.StartsWith("#", StringComparison.Ordinal)
+                string.IsNullOrEmpty(username)
+                || username.StartsWith("#", StringComparison.Ordinal)
             ) {
                 return;
             }
+
+            // fetch user record associated with this connection
             CurrentUser = await _table.GetRowAsync<ConnectionUser>(CurrentRequest.RequestContext.ConnectionId);
+
+            // update user name
             var oldName = CurrentUser.UserName;
             CurrentUser.UserName = request.UserName;
             await _table.PutRowAsync(CurrentUser);
+
+            // notify all connections about renamed user
             await NotifyAllAsync("#host", $"{oldName} is now known as {CurrentUser.UserName}");
         }
 
-        private async Task NotifyAllAsync(string username, string message) {
-            await _sqsClient.SendMessageAsync(new Amazon.SQS.Model.SendMessageRequest {
-                MessageBody = LambdaSerializer.Serialize(new NotifyMessage {
-                    Message = LambdaSerializer.Serialize(new UserMessageResponse {
-                        From = username,
-                        Text = message
-                    })
-                }),
-                QueueUrl = _notifyQueueUrl
+        private Task NotifyAllAsync(string from, string message)
+            => NotifyAsync(new UserMessageResponse {
+                From = from,
+                Text = message
             });
-        }
 
-        private async Task NotifyUserNameAsync(string connectionId, string userName) {
-            await _sqsClient.SendMessageAsync(new Amazon.SQS.Model.SendMessageRequest {
+        private Task NotifyUserNameAsync(string connectionId, string userName)
+            => NotifyAsync(new UserNameResponse {
+                UserName = userName
+            }, connectionId);
+
+        private Task NotifyAsync<T>(T response, string connectionId = null) where T : NotifyResponse
+            => _sqsClient.SendMessageAsync(new Amazon.SQS.Model.SendMessageRequest {
                 MessageBody = LambdaSerializer.Serialize(new NotifyMessage {
                     ConnectionId = connectionId,
-                    Message = LambdaSerializer.Serialize(new UserNameResponse {
-                        UserName = userName
-                    })
+                    Message = LambdaSerializer.Serialize(response)
                 }),
                 QueueUrl = _notifyQueueUrl
             });
-        }
     }
 }

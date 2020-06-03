@@ -1,5 +1,5 @@
 # LambdaSharp (λ#)
-# Copyright (C) 2018-2019
+# Copyright (C) 2018-2020
 # lambdasharp.net
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +36,7 @@ Items:
         - AttributeName: ConnectionId
           KeyType: HASH
 
-  # Create function for web-socket requests
+  # Function for handling web-socket requests
   - Function: ChatFunction
     Description: Handle web-socket messages
     Memory: 256
@@ -44,14 +44,17 @@ Items:
     Sources:
       - WebSocket: $connect
         Invoke: OpenConnection
+
       - WebSocket: $disconnect
         Invoke: CloseConnection
+
       - WebSocket: send
         Invoke: SendMessage
+
       - WebSocket: rename
         Invoke : RenameUser
 
-  # Create function for sending response to web-sockets
+  # Function for sending response to web-sockets
   - Function: NotifyFunction
     Description: Notify all web-sockets
     Memory: 256
@@ -73,35 +76,34 @@ Items:
       Contents:
         ServerUri: !Ref WebSocketUrl
 
-  # Create bucket to host website
+  # Bucket to host website
   - Resource: WebsiteBucket
     Description: S3 bucket for hosting website assets
     Type: AWS::S3::Bucket
-    Properties:
-      WebsiteConfiguration:
-        ErrorDocument: index.html
-        IndexDocument: index.html
 
   - Resource: WebsiteBucketPolicy
-    Description: Public access policy
+    Description: CloudFront-only access policy
     Type: AWS::S3::BucketPolicy
     Properties:
       PolicyDocument:
         Id: WebsiteBucket
         Version: 2012-10-17
         Statement:
-          - Sid: PublicReadForGetBucketObjects
+          - Sid: AllowCloudFrontAccess
             Effect: Allow
-            Principal: '*'
+            Principal:
+              AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${WebsiteCloudFrontIdentity}"
             Action: s3:GetObject
             Resource: !Sub "${WebsiteBucket.Arn}/*"
       Bucket: !Ref WebsiteBucket
     DependsOn: DeployWebsiteFiles
 
+  # Publish Blazor WebAssembly app into a folder and compress into a zip package
   - Package: WebsiteFiles
-    Build: dotnet publish -c Release BlazorWebSocket
+    Build: dotnet publish -c Release BlazorWebSocket -p:BlazorEnableCompression=false
     Files: BlazorWebSocket/bin/Release/netstandard2.1/publish/wwwroot/
 
+  # Copy Blazor WebAssembly files to S3 bucket with Brotli encoding
   - Resource: DeployWebsiteFiles
     Type: LambdaSharp::S3::Unzip
     Properties:
@@ -109,53 +111,67 @@ Items:
       SourceKey: !Ref WebsiteFiles
       DestinationBucket: !Ref WebsiteBucket
       DestinationKey: ""
+      Encoding: BROTLI
 
-  # - Resource: WebsiteCloudFront
-  #   Description: CloudFront distribution for https:// web access to the S3 bucket
-  #   Type: AWS::CloudFront::Distribution
-  #   DependsOn:
-  #     - WebsiteBucket
-  #   Properties:
-  #     DistributionConfig:
-  #       Comment: CloudFront Distribution pointing to the S3 bucket
-  #       Origins:
-  #         - DomainName: !GetAtt WebsiteBucket.DomainName
-  #           Id: S3Origin
-  #           CustomOriginConfig:
-  #             HTTPPort: 80
-  #             HTTPSPort: 443
-  #             OriginProtocolPolicy: http-only
-  #       Enabled: true
-  #       HttpVersion: http2
-  #       DefaultRootObject: index.html
-  #       DefaultCacheBehavior:
-  #         AllowedMethods:
-  #           - GET
-  #           - HEAD
-  #         Compress: true
-  #         DefaultTTL: 0
-  #         TargetOriginId: S3Origin
-  #         ForwardedValues:
-  #           QueryString: true
-  #           Cookies:
-  #             Forward: none
-  #         MinTTL: 0
-  #         ViewerProtocolPolicy: redirect-to-https
-  #       PriceClass: PriceClass_100
+  - Resource: WebsiteCloudFront
+    Description: CloudFront distribution for https:// web access to the S3 bucket
+    Type: AWS::CloudFront::Distribution
+    Scope: InvalidateCloudFrontFunction
+    Properties:
+      DistributionConfig:
+        Comment: !Sub "CloudFront Distribution pointing to the S3 bucket for ${Module::Id}"
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt WebsiteBucket.DomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${WebsiteCloudFrontIdentity}"
+        Enabled: true
+        HttpVersion: http2
+        DefaultRootObject: index.html
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          DefaultTTL: 2592000 # 30 days
+          TargetOriginId: S3Origin
+          ForwardedValues:
+            QueryString: true
+            Cookies:
+              Forward: none
+          ViewerProtocolPolicy: redirect-to-https
+        PriceClass: PriceClass_100
+    DependsOn: WebsiteBucketPolicy
+
+  - Resource: WebsiteCloudFrontPermissions
+    Allow:
+        - cloudfront:CreateInvalidation
+    Value: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebsiteCloudFront}"
+
+  - Resource: WebsiteCloudFrontIdentity
+    Description: CloudFront Origin Identity for authenticating distribution with the S3 bucket
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub "CloudFront Identity used by ${Module::Id}"
+
+  - Function: InvalidateCloudFrontFunction
+    Description: Invoked by S3 when files change in the website bucket so they can be invalidated in the CloudFront cache
+    Memory: 256
+    Timeout: 30
+    Sources:
+      - S3: WebsiteBucket
+        Events:
+          - s3:ObjectCreated:*
+          - s3:ObjectRemoved:*
 
   # Export website url
-
-  # - Variable: WebsiteUrl
-  #   Description: Website URL
-  #   Scope: public
-  #   Value: !Sub "https://${WebsiteCloudFront.DomainName}/"
+  - Variable: WebsiteUrl
+    Description: Website URL
+    Scope: public
+    Value: !Sub "https://${WebsiteCloudFront.DomainName}/"
 
   - Variable: WebSocketUrl
     Description: WebSocket URL
     Scope: public
     Value: !Ref Module::WebSocket::Url
-
-  - Variable: WebsiteUrl
-    Description: Website URL
-    Scope: public
-    Value: !GetAtt WebsiteBucket.WebsiteURL
