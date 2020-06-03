@@ -6,7 +6,7 @@
 
 This LambdaSharp module creates a web chat front-end using [ASP.NET Core Blazor WebAssembly](https://docs.microsoft.com/en-us/aspnet/core/blazor/get-started) and back-end using [API Gateway V2 WebSocket](https://aws.amazon.com/blogs/compute/announcing-websocket-apis-in-amazon-api-gateway/) as self-contained CloudFormation template. The front-end is served by an S3 bucket and secured by a CloudFront distribution. The front-end code is delivered as [WebAssembly](https://webassembly.org/) using ASP.NET Core Blazor. The back-end uses API Gateway V2 WebSocket to facilitate communication between clients. The code and assets for the front-end are built by `dotnet` and then copied to the S3 bucket during deployment. Afterwards, a CloudFront distribution is created to provide secure access over `https://` to the front-end. Finally, an API Gateway V2 WebSocket is deployed with two Lambda functions that handle WebSocket connections and message notifications.
 
-> **NOTE:** This LambdaSharp module requires .NET Core 3.1.300 and LambdaSharp.Tool 0.8, or later.
+> **NOTE:** This LambdaSharp module requires .NET Core 3.1.300 and LambdaSharp.Tool 0.8.0.2, or later.
 
 ![WebChat](Assets/LambdaSharpWebChat.png)
 
@@ -69,7 +69,7 @@ The following happens when the module is deployed.
 1. Create a private S3 bucket.
 1. Create a bucket policy to CloudFront access.
 1. Create a `config.json` file with the websocket URL.
-1. Copy the `wwwroot` files to the S3 bucket.
+1. Copy the `wwwroot` files to the S3 bucket using [brotli compression](https://en.wikipedia.org/wiki/Brotli).
 1. Create CloudFront distribution to enable https:// access to the S3-hosted website
 1. Create an SQS queue to buffer web-socket notifications.
 1. Show the website URL.
