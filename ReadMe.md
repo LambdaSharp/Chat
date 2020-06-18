@@ -120,59 +120,80 @@ Extra Credit
 ### Primary Records
 
 **User Record**
-  PK: "USER#${user-id}"
-  SK: "INFO"
-  UserId: string
-  UserName: string
+|Column       |Value
+|-------------|------------------
+|PK           |"USER#{user-id}"
+|SK           |"INFO"
+|UserId       |string
+|UserName     |string
+
+**Connection Record**
+|Column       |Value
+|-------------|------------------
+|PK           |"WS#{connection-id}"
+|SK           |"INFO"
+|ConnectionId |string
+|UserId       |string
 
 **Channel Record**
-  PK: "ROOM#${room-id}"
-  SK: "INFO"
-  ChannelId: string
-  ChannelName: string
+|Column       |Value
+|-------------|------------------
+|PK           |"ROOM#{room-id}"
+|SK           |"INFO"
+|ChannelId    |string
+|ChannelName  |string
 
-**Connection Record* (TODO: this feel like it should be an index)**
-  PK: "USER#${user-id}"
-  SK: "WS#${connection-id}"
-  ConnectionId: string
+### Secondary Records
 
 **Subscription Record**
-  PK: "ROOM#${room-id}"
-  SK: "USER#${user-id}"
-  ChannelId: string
-  UserId: string
-  LastSeenTimestamp: timestamp
+|Column           |Value
+|-----------------|------------------
+|PK               |"ROOM#{room-id}"
+|SK               |"USER#{user-id}"
+|ChannelId        |string
+|UserId           |string
+|LastSeenTimestamp|timestamp
 
 **Message Record**
-  PK: "ROOM#${room-id}"
-  SK: "WHEN#${timestamp}|{jitter}"
-  UserId: string
-  ChannelId: string
-  When: number
-  Message: string
-  Jitter: string
+|Column       |Value
+|-------------|------------------
+|PK           |"ROOM#{room-id}"
+|SK           |"WHEN#{timestamp:0000000000000000}|{jitter}"
+|UserId       |string
+|ChannelId    |string
+|Timestamp    |number
+|Message      |string
+|Jitter       |string
 
 ### Projected Records
 
-User-to-Channel (Subscription Record Index)
-  PK: "USER#${user-id}"
-  SK: "ROOM#${room-id}"
-  ChannelId: string
-  UserId: string
-  LastSeenTimestamp: timestamp
+**User-to-Connection Record**
+|Column       |Value
+|-------------|------------------
+|PK           |"USER#{user-id}"
+|SK           |"WS#{connection-id}"
+|ConnectionId |string
+|UserId       |string
 
-Connection-to-User Index
-  PK: "WS#${connection-id}"
-  SK: "INFO"
-  UserId: string
+**User-to-Channel Record**
+|Column   |Value
+|---------|------------------
+|PK       |"USER#{user-id}"
+|SK       |"ROOM#{room-id}"
+|ChannelId        |string
+|UserId           |string
+|LastSeenTimestamp|timestamp
+
+### TODO: not implemented
 
 Global-Channels (Index)
-  PK: "GLOBAL"
-  SK: "ROOM#${room-id}"
+* PK: "GLOBAL"
+* SK: "ROOM#{room-id}"
+
 
 Global-Users (Index)
-  PK: "GLOBAL"
-  SK: "USER#${user-id}"
+* PK: "GLOBAL"
+* SK: "USER#{user-id}"
 
 
 ## Future Improvements

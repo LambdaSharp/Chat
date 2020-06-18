@@ -122,11 +122,11 @@ namespace Demo.WebSocketsChat.ChatFunction {
             LogInfo($"Disconnected: {request.RequestContext.ConnectionId}");
 
             // fetch user record associated with this connection
-            CurrentUser = await ConnectionRecord.GetUserByConnectionAsync(_table, CurrentRequest.RequestContext.ConnectionId);
-            if(CurrentUser != null) {
+            var connection = await ConnectionRecord.GetConnectionAsync(_table, CurrentRequest.RequestContext.ConnectionId);
+            if(connection != null) {
 
                 // remove connection record
-                await _table.DeleteRowAsync(CurrentUser.ConnectionId);
+                await connection.DeleteAsync(_table);
 
                 // notify all connections about user who left
                 await NotifyAllAsync("#host", $"{CurrentUser.UserName} left");

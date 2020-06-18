@@ -25,31 +25,60 @@ namespace Demo.WebSocketsChat.Common.Records {
 
     public sealed class ConnectionRecord : ARecord {
 
+        //--- Types ---
+        private class ReverseLookup : ARecord {
+
+            //--- Constructors ---
+            public ReverseLookup(ConnectionRecord record) {
+                ConnectionId = record.ConnectionId;
+                UserId = record.UserId;
+            }
+
+            //--- Properties ---
+            public override string PK => USER_PREFIX + UserId;
+            public override string SK => CONNECTION_PREFIX + ConnectionId;
+            public string ConnectionId { get; }
+            public string UserId { get; }
+        }
+
         //--- Class Methods ---
         public static async Task<ConnectionRecord> CreateConnectionAsync(Table table, string connectionId, string userId) {
+
+            // create the connetion record
             var result = new ConnectionRecord {
                 ConnectionId = connectionId,
-                UserId = userId,
+                UserId = userId
             };
             await result.CreateAsync(table);
+
+            // create the reverse-lookup record
+            await new ReverseLookup(result).CreateAsync(table);
             return result;
         }
 
-        public static async Task<UserRecord> GetUserByConnectionAsync(Table table, string connectionId)
+        public static Task<ConnectionRecord> GetConnectionAsync(Table table, string connectionId)
+            => GetItemAsync<ConnectionRecord>(table, CONNECTION_PREFIX + connectionId, INFO);
 
-            // TODO: use reverse look-up to identify which user owns this connection
-            => throw new NotImplementedException();
+        public async Task<IEnumerable<ConnectionRecord>> GetConnectionsByUserAsync(Table table, string userId) {
+
+            // use reverse-lookup to find connections opened by user
+            var query = new QueryFilter("SK", QueryOperator.BeginsWith, CONNECTION_PREFIX);
+            return await DoSearchAsync<ConnectionRecord>(table.Query(USER_PREFIX + userId, query));
+        }
+
 
         //--- Properties ---
-        public override string PK => USER_PREFIX + UserId;
-        public override string SK => CONNECTION_PREFIX + ConnectionId;
-        public string UserId { get; set; }
+        public override string PK => CONNECTION_PREFIX + ConnectionId;
+        public override string SK => INFO;
         public string ConnectionId { get; set; }
+        public string UserId { get; set; }
 
         //--- Methods ---
-        public async Task<IEnumerable<ConnectionRecord>> GetUserConnectionsAsync(Table table) {
-            var query = new QueryFilter("SK", QueryOperator.BeginsWith, CONNECTION_PREFIX);
-            return await DoSearchAsync<ConnectionRecord>(table.Query(PK, query));
+        public override async Task DeleteAsync(Table table) {
+            await base.DeleteAsync(table);
+
+            // also delete the reverse-lookup record
+            await new ReverseLookup(this).DeleteAsync(table);
         }
     }
 }
