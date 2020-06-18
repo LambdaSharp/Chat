@@ -30,11 +30,39 @@ Items:
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: ConnectionId
+        - AttributeName: PK
           AttributeType: S
+
+        - AttributeName: SK
+          AttributeType: S
+
+        - AttributeName: Message
+          AttributeType: S
+
+        - AttributeName: UserName
+          AttributeType: S
+
+        - AttributeName: ChannelName
+          AttributeType: S
+
+        - AttributeName: LastSeenTimestamp
+          AttributeType: "N"
+
+        - AttributeName: Timestamp
+          AttributeType: "N"
+
+        - AttributeName: UserId
+          AttributeType: S
+
+        - AttributeName: ChannelId
+          AttributeType: S
+
       KeySchema:
-        - AttributeName: ConnectionId
+        - AttributeName: PK
           KeyType: HASH
+
+        - AttributeName: SK
+          KeyType: RANGE
 
   # Function for handling web-socket requests
   - Function: ChatFunction

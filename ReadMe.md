@@ -34,7 +34,7 @@ During the build phase, LambdaSharp extracts the message schema from the .NET im
       Invoke: OpenConnectionAsync
 
     - WebSocket: $disconnect
-      Invoke: CloseConnectionAsync
+      Inpvoke: CloseConnectionAsync
 
     - WebSocket: send
       Invoke: SendMessageAsync
@@ -98,6 +98,76 @@ This JSON message changes the user name to _Bob_ for the current user:
     "UserName": "Bob"
 }
 ```
+
+## DynamoDB Table
+
+* `CreateUser(name)`
+* `GetUser(user)`
+* `GetSubscribedChannels(user)`
+* `GetMessagesSince(channel, timestamp)`
+* `GetUserConnections(user)`
+* `GetChannelUsers(channel)`
+* `GetChannel(channel)`
+* `JoinChannel(user, channel)`
+* `LeaveChannel(user, channel)`
+* `CreateMessage(user, channel, text)`
+
+Extra Credit
+* `GetAllChannels()`
+* `CreateChannel(name)`
+* `DeleteChannel(channel)`
+
+Message Record*
+  PK: "ROOM#${room-id}"
+  SK: "WHEN#${timestamp}"
+  UserId: string
+  ChannelId: string
+  When: number
+  Message: string
+
+User Record*
+  PK: "USER#${user-id}"
+  SK: "INFO"
+  Id: string
+  UserName: string
+
+Channel Record*
+  PK: "ROOM#${room-id}"
+  SK: "INFO"
+  Id: string
+  ChannelName: string
+
+Connection Record*
+  PK: "USER#${user-id}"
+  SK: "WS#${connection-id}"
+
+Subscription Record*
+  PK: "ROOM#${room-id}"
+  SK: "USER#${user-id}"
+  ChannelId: string
+  UserId: string
+  LastSeenTimestamp: timestamp
+
+User-to-Channel (Subscription Record Index)
+  PK: "USER#${user-id}"
+  SK: "ROOM#${room-id}"
+  ChannelId: string
+  UserId: string
+  LastSeenTimestamp: timestamp
+
+Connection-to-User Index
+  PK: "WS#${connection-id}"
+  SK: "INFO"
+  UserId: string
+
+Global-Channels (Index)
+  PK: "GLOBAL"
+  SK: "ROOM#${room-id}"
+
+Global-Users (Index)
+  PK: "GLOBAL"
+  SK: "USER#${user-id}"
+
 
 ## Future Improvements
 - [x] Allow users to rename themselves.
