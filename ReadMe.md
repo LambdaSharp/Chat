@@ -117,36 +117,42 @@ Extra Credit
 * `CreateChannel(name)`
 * `DeleteChannel(channel)`
 
-Message Record*
-  PK: "ROOM#${room-id}"
-  SK: "WHEN#${timestamp}"
-  UserId: string
-  ChannelId: string
-  When: number
-  Message: string
+### Primary Records
 
-User Record*
+**User Record**
   PK: "USER#${user-id}"
   SK: "INFO"
-  Id: string
+  UserId: string
   UserName: string
 
-Channel Record*
+**Channel Record**
   PK: "ROOM#${room-id}"
   SK: "INFO"
-  Id: string
+  ChannelId: string
   ChannelName: string
 
-Connection Record*
+**Connection Record* (TODO: this feel like it should be an index)**
   PK: "USER#${user-id}"
   SK: "WS#${connection-id}"
+  ConnectionId: string
 
-Subscription Record*
+**Subscription Record**
   PK: "ROOM#${room-id}"
   SK: "USER#${user-id}"
   ChannelId: string
   UserId: string
   LastSeenTimestamp: timestamp
+
+**Message Record**
+  PK: "ROOM#${room-id}"
+  SK: "WHEN#${timestamp}|{jitter}"
+  UserId: string
+  ChannelId: string
+  When: number
+  Message: string
+  Jitter: string
+
+### Projected Records
 
 User-to-Channel (Subscription Record Index)
   PK: "USER#${user-id}"

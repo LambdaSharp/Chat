@@ -26,6 +26,7 @@ using LambdaSharp;
 using LambdaSharp.ApiGateway;
 using Demo.WebSocketsChat.Common;
 using Amazon.DynamoDBv2.DocumentModel;
+using Demo.WebSocketsChat.Common.Records;
 
 namespace Demo.WebSocketsChat.ChatFunction {
 
@@ -80,18 +81,18 @@ namespace Demo.WebSocketsChat.ChatFunction {
                     UserId = username,
                     UserName = username
                 };
-                await user.SaveAsync(_table);
+                await user.CreateOrUpdateAsync(_table);
 
                 // create connection record
                 var connection = new ConnectionRecord {
                     UserId = user.UserId,
                     ConnectionId = request.RequestContext.ConnectionId
                 };
-                await connection.SaveAsync(_table);
+                await connection.CreateOrUpdateAsync(_table);
 
                 // create user subscription to "General" channel
                 var channel = await ChannelRecord.GetChannelAsync(_table, "General");
-                await channel.JoinChannelAsync(_table, user.UserId);
+                await SubscriptionRecord.JoinChannelAsync(_table, channel.ChannelId, user.UserId);
             } else {
 
                 // create connection record
@@ -99,7 +100,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
                     UserId = user.UserId,
                     ConnectionId = request.RequestContext.ConnectionId
                 };
-                await connection.SaveAsync(_table);
+                await connection.CreateOrUpdateAsync(_table);
             }
 
             // fetch all channels the user is subscribed to
@@ -107,7 +108,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
             foreach(var subscription in subscriptions) {
 
                 // fetch all messages the user may have missed since last time they were connected
-                var messages = await MessageRecord.GetMessagesSinceAsync(_table, subscription.ChannelId, subscription.LastSeenTimestamp);
+                var messages = await subscription.GetNewMessagesAsync(_table);
                 foreach(var message in messages) {
 
                     // notify user about missed messages
@@ -121,7 +122,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
             LogInfo($"Disconnected: {request.RequestContext.ConnectionId}");
 
             // fetch user record associated with this connection
-            CurrentUser = await _table.GetRowAsync<ConnectionUser>(CurrentRequest.RequestContext.ConnectionId);
+            CurrentUser = await ConnectionRecord.GetUserByConnectionAsync(_table, CurrentRequest.RequestContext.ConnectionId);
             if(CurrentUser != null) {
 
                 // remove connection record

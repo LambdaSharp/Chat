@@ -36,27 +36,6 @@ Items:
         - AttributeName: SK
           AttributeType: S
 
-        - AttributeName: Message
-          AttributeType: S
-
-        - AttributeName: UserName
-          AttributeType: S
-
-        - AttributeName: ChannelName
-          AttributeType: S
-
-        - AttributeName: LastSeenTimestamp
-          AttributeType: "N"
-
-        - AttributeName: Timestamp
-          AttributeType: "N"
-
-        - AttributeName: UserId
-          AttributeType: S
-
-        - AttributeName: ChannelId
-          AttributeType: S
-
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
