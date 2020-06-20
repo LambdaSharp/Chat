@@ -41,5 +41,8 @@ namespace Demo.WebSocketsChat.Common.Records {
         //--- Abstract Properties ---
         public abstract string PK { get; }
         public abstract string SK { get; }
+
+        //--- Propterties ---
+        public string _Type => GetType().Name;
     }
 }
