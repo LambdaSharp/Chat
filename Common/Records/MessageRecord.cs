@@ -16,26 +16,13 @@
  * limitations under the License.
  */
 
-using System;
-using System.Threading.Tasks;
-using Amazon.DynamoDBv2.DocumentModel;
-
 namespace Demo.WebSocketsChat.Common.Records {
 
     public sealed class MessageRecord : ARecord {
 
-        //--- Class Methods ---
-        public static async Task<MessageRecord> CreateMessage(Table table, string userId, string channelId, string message) {
-            var record = new MessageRecord {
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                UserId = userId,
-                ChannelId = channelId,
-                Message = message,
-                Jitter = RandomString(8)
-            };
-            await record.CreateAsync(table);
-            return record;
-        }
+
+        //--- Fields ---
+        private string _jitter;
 
         //--- Properties ---
         public override string PK => CHANNEL_PREFIX + ChannelId;
@@ -44,6 +31,14 @@ namespace Demo.WebSocketsChat.Common.Records {
         public string UserId { get; set; }
         public string ChannelId { get; set; }
         public string Message { get; set; }
-        public string Jitter { get; set; }
+        public string Jitter {
+            get {
+                if(_jitter == null) {
+                    _jitter = GetRandomString(4);
+                }
+                return _jitter;
+            }
+            set => _jitter = value;
+        }
     }
 }

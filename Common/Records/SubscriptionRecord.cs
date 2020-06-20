@@ -16,61 +16,17 @@
  * limitations under the License.
  */
 
-using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Amazon.DynamoDBv2.DocumentModel;
+using Demo.WebSocketsChat.Common.DynamoDB;
 
 namespace Demo.WebSocketsChat.Common.Records {
 
-    public sealed class SubscriptionRecord : ARecord {
-
-        //--- Types ---
-        private class ReverseLookup : ARecord {
-
-            //--- Constructors ---
-            public ReverseLookup(SubscriptionRecord record) {
-                    ChannelId = record.ChannelId;
-                    UserId = record.UserId;
-                    LastSeenTimestamp = record.LastSeenTimestamp;
-            }
-
-            //--- Properties ---
-            public override string PK => USER_PREFIX + UserId;
-            public override string SK => CHANNEL_PREFIX + ChannelId;
-            public string ChannelId { get; }
-            public string UserId { get; }
-            public long LastSeenTimestamp { get; }
-        }
-
-        //--- Class Methods ---
-        public static async Task<SubscriptionRecord> JoinChannelAsync(Table table, string channelId, string userId) {
-
-            // create subscription record
-            var result = new SubscriptionRecord {
-                ChannelId = channelId,
-                UserId = userId,
-                LastSeenTimestamp = 0L
-            };
-            await result.CreateAsync(table);
-
-            // create the reverse-lookup record
-            await new ReverseLookup(result).CreateAsync(table);
-            return result;
-        }
-
-        public static async Task LeaveChannelAsync(Table table, string channelId, string userId)
-            => await new SubscriptionRecord {
-                ChannelId = channelId,
-                UserId = userId
-            }.DeleteAsync(table);
-
-        public static async Task<IEnumerable<SubscriptionRecord>> GetSubscriptionsByUserAsync(Table table, string userId) {
-
-            // use reverse-lookup to find subscriptions belonging to user
-            var query = new QueryFilter("SK", QueryOperator.BeginsWith, CHANNEL_PREFIX);
-            return await DoSearchAsync<SubscriptionRecord>(table.Query(USER_PREFIX + userId, query));
-        }
+    public sealed class SubscriptionRecord :
+        ARecord,
+        IRecordProjected<SubscriptionRecord>,
+        ISecondaryRecord<ChannelRecord>,
+        ISecondaryRecord<UserRecord>
+    {
 
         //--- Properties ---
         public override string PK => CHANNEL_PREFIX + ChannelId;
@@ -79,19 +35,14 @@ namespace Demo.WebSocketsChat.Common.Records {
         public string UserId { get; set; }
         public long LastSeenTimestamp { get; set; }
 
-        //--- Methods ---
-        public async Task<IEnumerable<MessageRecord>> GetNewMessagesAsync(Table table) {
+        //--- IProjectedRecord<ConnectionRecord> Members ---
+        IEnumerable<IProjection<SubscriptionRecord>> IRecordProjected<SubscriptionRecord>.Projections
+            => Projections<SubscriptionRecord>((item => USER_PREFIX + UserId, item => CHANNEL_PREFIX + ChannelId));
 
-            // TODO: implement query that fetches all messages in the channel since the last seen timestamp
-            throw new NotImplementedException();
-        }
+        //--- ISecondaryRecord<ChannelRecord> Members ---
+        string ISecondaryRecord<ChannelRecord>.SKPrefix => USER_PREFIX;
 
-        //--- Methods ---
-        public override async Task DeleteAsync(Table table) {
-            await base.DeleteAsync(table);
-
-            // also delete the reverse-lookup record
-            await new ReverseLookup(this).DeleteAsync(table);
-        }
+        //--- IProjectedRecord<UserRecord> Members ---
+        string ISecondaryRecord<UserRecord>.SKPrefix => CHANNEL_PREFIX;
     }
 }

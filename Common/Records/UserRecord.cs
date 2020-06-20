@@ -24,27 +24,10 @@ namespace Demo.WebSocketsChat.Common.Records {
 
     public sealed class UserRecord : ARecord {
 
-        //--- Class Methods ---
-        public static Task<UserRecord> GetUserRecord(Table table, string id)
-            => GetItemAsync<UserRecord>(table, USER_PREFIX + id, INFO);
-
         //--- Properties ---
         public override string PK => USER_PREFIX + UserId;
         public override string SK => INFO;
         public string UserId { get; set; }
         public string UserName { get; set; }
-
-        //--- Methods ---
-        public async Task<IEnumerable<ConnectionRecord>> GetConnectionsAsync(Table table) {
-            var query = new QueryFilter("SK", QueryOperator.BeginsWith, CONNECTION_PREFIX);
-            return await DoSearchAsync<ConnectionRecord>(table.Query(PK, query));
-        }
-
-        public async Task<IEnumerable<SubscriptionRecord>> GetSubscribedChannelsAsync(Table table) {
-
-            // TODO: specify using the User-to-Channel (Subscription Record Index)
-            var query = new QueryFilter("SK", QueryOperator.BeginsWith, CHANNEL_PREFIX);
-            return await DoSearchAsync<SubscriptionRecord>(table.Query(PK, query));
-        }
     }
 }

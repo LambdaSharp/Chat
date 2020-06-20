@@ -28,7 +28,13 @@ namespace Demo.WebSocketsChat.Common.DynamoDB {
         string SK { get; }
     }
 
-    public interface IProjectedRecord<T> where T : IRecord {
+    public interface ISecondaryRecord<T> {
+
+        //--- Properties ---
+        string SKPrefix { get; }
+    }
+
+    public interface IRecordProjected<T> where T : IRecord {
 
         //--- Properties ---
         IEnumerable<IProjection<T>> Projections { get; }
@@ -41,7 +47,7 @@ namespace Demo.WebSocketsChat.Common.DynamoDB {
         string GetSK(T item);
     }
 
-    public readonly struct Projection<T> : IProjection<T> where T : IRecord {
+    public class Projection<T> : IProjection<T> where T : IRecord {
 
         //--- Fields ---
         private readonly Func<T, string> _getPK;
@@ -57,8 +63,4 @@ namespace Demo.WebSocketsChat.Common.DynamoDB {
         public string GetPK(T item) => _getPK(item);
         public string GetSK(T item) => _getSK(item);
     }
-
-    public interface IPrimaryRecord : IRecord { }
-
-    public interface IRelatedRecord : IRecord { }
 }

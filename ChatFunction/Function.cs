@@ -25,27 +25,18 @@ using Amazon.SQS;
 using LambdaSharp;
 using LambdaSharp.ApiGateway;
 using Demo.WebSocketsChat.Common;
-using Amazon.DynamoDBv2.DocumentModel;
 using Demo.WebSocketsChat.Common.Records;
+using Demo.WebSocketsChat.Common.DynamoDB;
+using System.Runtime.CompilerServices;
 
 namespace Demo.WebSocketsChat.ChatFunction {
 
     public class Function : ALambdaApiGatewayFunction {
 
-        //--- Class Fields ---
-        private readonly static Random _random = new Random();
-
-        //--- Class Methods ---
-        public static string RandomString(int length)
-            => new string(Enumerable.Repeat("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", length).Select(chars => chars[_random.Next(chars.Length)]).ToArray());
-
         //--- Fields ---
-        private Table _table;
+        private DynamoTable _table;
         private string _notifyQueueUrl;
         private IAmazonSQS _sqsClient;
-
-        //--- Properties ---
-        public UserRecord CurrentUser { get; set; }
 
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
@@ -55,10 +46,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
             _notifyQueueUrl = config.ReadSqsQueueUrl("NotifyQueue");
 
             // initialize AWS clients
-            _table = Table.LoadTable(
-                new AmazonDynamoDBClient(),
-                connectionsTableName
-            );
+            _table = new DynamoTable(connectionsTableName, new AmazonDynamoDBClient());
             _sqsClient = new AmazonSQSClient();
         }
 
@@ -68,9 +56,11 @@ namespace Demo.WebSocketsChat.ChatFunction {
             // check if a user already exists or create a new one
             UserRecord user = null;
             if(username != null) {
-                user = await UserRecord.GetUserRecord(_table, username);
+                user = await _table.GetAsync(new UserRecord {
+                    UserId = username
+                });
             } else {
-                username = $"Anonymous-{RandomString(6)}";
+                username = $"Anonymous-{DynamoTable.GetRandomString(6)}";
             }
 
             // check if a new user is joining
@@ -81,38 +71,35 @@ namespace Demo.WebSocketsChat.ChatFunction {
                     UserId = username,
                     UserName = username
                 };
-                await user.CreateOrUpdateAsync(_table);
-
-                // create connection record
-                var connection = new ConnectionRecord {
-                    UserId = user.UserId,
-                    ConnectionId = request.RequestContext.ConnectionId
-                };
-                await connection.CreateOrUpdateAsync(_table);
+                await _table.CreateAsync(user);
 
                 // create user subscription to "General" channel
-                var channel = await ChannelRecord.GetChannelAsync(_table, "General");
-                await SubscriptionRecord.JoinChannelAsync(_table, channel.ChannelId, user.UserId);
-            } else {
-
-                // create connection record
-                var connection = new ConnectionRecord {
-                    UserId = user.UserId,
-                    ConnectionId = request.RequestContext.ConnectionId
-                };
-                await connection.CreateOrUpdateAsync(_table);
+                await _table.CreateAsync(new SubscriptionRecord {
+                    ChannelId = "General",
+                    UserId = user.UserId
+                });
             }
 
+            // create connection record
+            await _table.CreateAsync(new ConnectionRecord {
+                UserId = user.UserId,
+                ConnectionId = request.RequestContext.ConnectionId
+            });
+
             // fetch all channels the user is subscribed to
-            var subscriptions = await user.GetSubscribedChannelsAsync(_table);
+            var subscriptions = await _table.GetAllSecondaryRecordsAsync<UserRecord, SubscriptionRecord>(user);
             foreach(var subscription in subscriptions) {
 
                 // fetch all messages the user may have missed since last time they were connected
                 var messages = await subscription.GetNewMessagesAsync(_table);
                 foreach(var message in messages) {
 
+                    // TODO: do a batch get on the users
+
                     // notify user about missed messages
-                    var fromUser = await UserRecord.GetUserRecord(_table, message.UserId);
+                    var fromUser = _table.GetAsync(new UserRecord {
+                        UserId = message.UserId
+                    });
                     await NotifyUserAsync(user, fromUser, message);
                 }
             }
@@ -121,15 +108,17 @@ namespace Demo.WebSocketsChat.ChatFunction {
         public async Task CloseConnectionAsync(APIGatewayProxyRequest request) {
             LogInfo($"Disconnected: {request.RequestContext.ConnectionId}");
 
-            // fetch user record associated with this connection
-            var connection = await ConnectionRecord.GetConnectionAsync(_table, CurrentRequest.RequestContext.ConnectionId);
-            if(connection != null) {
+            // fetch the user record associated with this connection id
+            var user = await GetUserFromConnectionId(CurrentRequest.RequestContext.ConnectionId);
 
-                // remove connection record
-                await connection.DeleteAsync(_table);
+            // delete closed connection record
+            await _table.DeleteAsync(new ConnectionRecord {
+                ConnectionId = CurrentRequest.RequestContext.ConnectionId
+            });
 
-                // notify all connections about user who left
-                await NotifyAllAsync("#host", $"{CurrentUser.UserName} left");
+            // notify all connections about user who left
+            if(user != null) {
+                await NotifyAllAsync("#host", $"{user.UserName} left");
             }
         }
 
@@ -137,16 +126,25 @@ namespace Demo.WebSocketsChat.ChatFunction {
 
             // NOTE: this method is invoked by messages with the "send" route key
 
-            // fetch user record associated with this connection
-            CurrentUser = await _table.GetRowAsync<ConnectionUser>(CurrentRequest.RequestContext.ConnectionId);
+            // fetch the user record associated with this connection id
+            var user = await GetUserFromConnectionId(CurrentRequest.RequestContext.ConnectionId);
+            if(user == null) {
+                return;
+            }
 
             // notify all connections about new message
-            await NotifyAllAsync(CurrentUser.UserName, request.Text);
+            await NotifyAllAsync(user.UserName, request.Text);
         }
 
         public async Task RenameUserAsync(RenameUserRequest request) {
 
             // NOTE: this method is invoked by messages with the "rename" route key
+
+            // fetch the user record associated with this connection id
+            var user = await GetUserFromConnectionId(CurrentRequest.RequestContext.ConnectionId);
+            if(user == null) {
+                return;
+            }
 
             // validate requested username
             var username = request.UserName?.Trim() ?? "";
@@ -157,19 +155,18 @@ namespace Demo.WebSocketsChat.ChatFunction {
                 return;
             }
 
-            // fetch user record associated with this connection
-            CurrentUser = await _table.GetRowAsync<ConnectionUser>(CurrentRequest.RequestContext.ConnectionId);
-
             // update user name
-            var oldName = CurrentUser.UserName;
-            CurrentUser.UserName = request.UserName;
-            await _table.PutRowAsync(CurrentUser);
+            var oldName = user.UserName;
+            user.UserName = request.UserName;
+            await _table.UpdateAsync(user);
 
             // notify all connections about renamed user
-            await NotifyAllAsync("#host", $"{oldName} is now known as {CurrentUser.UserName}");
+            await NotifyAllAsync("#host", $"{oldName} is now known as {user.UserName}");
         }
 
         private Task NotifyUserAsync(UserRecord user, UserRecord from, MessageRecord message)
+
+            // TODO: missing code
             => throw new NotImplementedException();
 
         private Task NotifyAllAsync(string from, string message)
@@ -191,5 +188,27 @@ namespace Demo.WebSocketsChat.ChatFunction {
                 }),
                 QueueUrl = _notifyQueueUrl
             });
+
+        private async Task<UserRecord> GetUserFromConnectionId(string connectionId, [CallerMemberName] string caller = "") {
+
+            // fetch the connection record associated with this connection ID
+            var connection = await _table.GetAsync(new ConnectionRecord {
+                ConnectionId = connectionId
+            });
+            if(connection == null) {
+                LogWarn($"[{caller}] Could not load connection record (connection id: {{0}}, request id: {{}})", CurrentRequest.RequestContext.ConnectionId, CurrentRequest.RequestContext.RequestId);
+                return null;
+            }
+
+            // fetch the user record associated with this connection
+            var user = await _table.GetAsync(new UserRecord {
+                UserId = connection.UserId
+            });
+            if(user == null) {
+                LogWarn($"[{caller}] Could not load user record (userid: {{0}}, request id: {{}})", connection.UserId, CurrentRequest.RequestContext.RequestId);
+                return null;
+            }
+            return user;
+        }
     }
 }

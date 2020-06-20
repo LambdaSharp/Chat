@@ -19,13 +19,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Amazon.DynamoDBv2.DocumentModel;
-using Newtonsoft.Json;
+using Demo.WebSocketsChat.Common.DynamoDB;
 
 namespace Demo.WebSocketsChat.Common.Records {
 
-    public abstract class ARecord {
+    public abstract class ARecord : IRecord {
 
         //--- Constants ---
         public const string USER_PREFIX = "USER#";
@@ -34,46 +32,14 @@ namespace Demo.WebSocketsChat.Common.Records {
         public const string TIMESTAMP_PREFIX = "WHEN#";
         public const string INFO = "INFO";
 
-        //--- Class Fields ---
-        private readonly static Random _random = new Random();
-
         //--- Class Methods ---
-        protected async static Task<IEnumerable<T>> DoSearchAsync<T>(Search search) {
-            var results = new List<T>();
-            do {
-                var documents = await search.GetNextSetAsync();
-                results.AddRange(documents.Select(document => JsonConvert.DeserializeObject<T>(document.ToJson())));
-            } while(!search.IsDone);
-            return results;
-        }
+        protected static IEnumerable<IProjection<T>> Projections<T>(params (Func<T, string> GetPK, Func<T, string> GetSK)[] projectors) where T : IRecord
+            => projectors.Select(tuple => (IProjection<T>)new Projection<T>(tuple.GetPK, tuple.GetSK)).ToArray();
 
-        protected async static Task<T> GetItemAsync<T>(Table table, string pk, string sk) {
-            var record = await table.GetItemAsync(pk, sk);
-            return (record != null)
-                ? JsonConvert.DeserializeObject<T>(record.ToJson())
-                : default;
-        }
-
-        protected static string RandomString(int length)
-            => new string(Enumerable.Repeat("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", length).Select(chars => chars[_random.Next(chars.Length)]).ToArray());
+        protected static string GetRandomString(int length) => DynamoTable.GetRandomString(length);
 
         //--- Abstract Properties ---
         public abstract string PK { get; }
         public abstract string SK { get; }
-
-        //--- Methods ---
-        public virtual Task CreateOrUpdateAsync(Table table)
-            => table.PutItemAsync(Document.FromJson(JsonConvert.SerializeObject(this)));
-
-        // TODO: ensure that the record does NOT exist yet
-        public virtual Task CreateAsync(Table table)
-            => table.PutItemAsync(Document.FromJson(JsonConvert.SerializeObject(this)));
-
-        // TODO: ensure that the record already exists
-        public virtual Task UpdateAsync(Table table)
-            => table.PutItemAsync(Document.FromJson(JsonConvert.SerializeObject(this)));
-
-        public virtual Task DeleteAsync(Table table)
-            => table.DeleteItemAsync(PK, SK);
     }
 }

@@ -16,28 +16,14 @@
  * limitations under the License.
  */
 
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Amazon.DynamoDBv2.DocumentModel;
-
 namespace Demo.WebSocketsChat.Common.Records {
 
     public sealed class ChannelRecord : ARecord {
-
-        //--- Class Methods ---
-        public static Task<ChannelRecord> GetChannelAsync(Table table, string channelId)
-            => GetItemAsync<ChannelRecord>(table, CHANNEL_PREFIX + channelId, INFO);
 
         //--- Properties ---
         public override string PK => CHANNEL_PREFIX + ChannelId;
         public override string SK => INFO;
         public string ChannelId { get; set; }
         public string ChannelName { get; set; }
-
-        //---Methods ----
-        public async Task<IEnumerable<UserRecord>> GetChannelUsersAsync(Table table) {
-            var query = new QueryFilter("SK", QueryOperator.BeginsWith, USER_PREFIX);
-            return await DoSearchAsync<UserRecord>(table.Query(PK, query));
-        }
     }
 }
