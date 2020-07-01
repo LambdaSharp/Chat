@@ -1,7 +1,8 @@
 @page "/"
 
 @using System.Net.WebSockets
-@using Demo.WebSocketsChat.Common
+@using Demo.WebSocketsChat.Common.Notifications;
+@using Demo.WebSocketsChat.Common.Requests;
 
 @implements IDisposable
 
@@ -38,10 +39,10 @@
         <ul class="list-group">
             @foreach(var message in Enumerable.Reverse(_messages).Select((x, i) => new { Value = x, Index = i })) {
                 <li class=@string.Format("list-group-item {0}", (message.Index % 2 == 0) ? "list-group-item-secondary" : "list-group-item-light")>
-                    @if(message.Value.From == "#host") {
+                    @if(message.Value.UserId == "#host") {
                         <p><span style="color:blue">Host </span> <small class="text-muted">@DateTimeOffset.UtcNow.ToString("HH:mm")</small> <br />@message.Value.Text</p>
                     } else {
-                        <p><span style="color:maroon">@message.Value.From</span> <small class="text-muted">@DateTimeOffset.UtcNow.ToString("HH:mm")</small> <br />@message.Value.Text</p>
+                        <p><span style="color:maroon">@message.Value.UserId</span> <small class="text-muted">@DateTimeOffset.UtcNow.ToString("HH:mm")</small> <br />@message.Value.Text</p>
                     }
                 </li>
             }
@@ -61,7 +62,7 @@
     }
 
     //--- Fields ---
-    private readonly List<UserMessageResponse> _messages = new List<UserMessageResponse>();
+    private readonly List<UserMessageNotification> _messages = new List<UserMessageNotification>();
     private readonly WebSocketDispatch _websocketDispatch = new WebSocketDispatch();
     private Uri _serverUri;
 
@@ -88,21 +89,21 @@
         }
 
         // configure WebSocket
-        _websocketDispatch.RegisterAction<UserMessageResponse>("message", ReceivedMessage);
-        _websocketDispatch.RegisterAction<UserNameResponse>("username", ReceivedUserName);
+        _websocketDispatch.RegisterAction<UserMessageNotification>("message", ReceivedMessage);
+        _websocketDispatch.RegisterAction<UserNameNotification>("username", ReceivedUserName);
 
         // attempt to connect to server
         _websocketDispatch.ServerUri = ServerUri;
         await _websocketDispatch.Connect();
     }
 
-    private void ReceivedMessage(UserMessageResponse message) {
-        Console.WriteLine($"Received from {message.From}: {message.Text}");
+    private void ReceivedMessage(UserMessageNotification message) {
+        Console.WriteLine($"Received from {message.UserId}: {message.Text}");
         _messages.Add(message);
         StateHasChanged();
     }
 
-    private void ReceivedUserName(UserNameResponse username) {
+    private void ReceivedUserName(UserNameNotification username) {
         Console.WriteLine($"Received UserName: {username.UserName}");
         UserName = username.UserName;
         _websocketDispatch.ServerUri = ServerUri;
@@ -111,7 +112,7 @@
 
     private async Task SendMessageAsync() {
         await _websocketDispatch.SendMessageAsync(new SendMessageRequest {
-            Action = "send",
+            ChannelId = "General",
             Text = ChatMessage
         });
         ChatMessage = "";
@@ -120,7 +121,6 @@
     private async Task RenameUserAsync() {
         await LocalStorage.SetItemAsync("UserName", UserName);
         await _websocketDispatch.SendMessageAsync(new RenameUserRequest {
-            Action = "rename",
             UserName = UserName
         });
     }

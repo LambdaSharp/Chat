@@ -18,7 +18,7 @@
 
 namespace Demo.WebSocketsChat.Common.Requests {
 
-    public class SendMessageRequest : AMessageRequest {
+    public sealed class SendMessageRequest : AMessageRequest {
 
         //--- Constructors ---
         public SendMessageRequest() => Action = "send";

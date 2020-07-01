@@ -18,7 +18,7 @@
 
 namespace Demo.WebSocketsChat.Common.Notifications {
 
-    public class UserMessageNotification : Notification {
+    public sealed class UserMessageNotification : Notification {
 
         //--- Constructors ---
         public UserMessageNotification() => Action = "message";

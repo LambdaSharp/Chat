@@ -18,7 +18,7 @@
 
 namespace Demo.WebSocketsChat.Common.Requests {
 
-    public class RenameUserRequest : AMessageRequest {
+    public sealed class RenameUserRequest : AMessageRequest {
 
         //--- Constructors ---
         public RenameUserRequest() => Action = "rename";
