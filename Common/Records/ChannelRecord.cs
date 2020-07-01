@@ -18,11 +18,9 @@
 
 namespace Demo.WebSocketsChat.Common.Records {
 
-    public sealed class ChannelRecord : ARecord {
+    public sealed class ChannelRecord {
 
         //--- Properties ---
-        public override string PK => CHANNEL_PREFIX + ChannelId;
-        public override string SK => INFO;
         public string ChannelId { get; set; }
         public string ChannelName { get; set; }
     }

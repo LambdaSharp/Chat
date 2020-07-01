@@ -18,27 +18,13 @@
 
 namespace Demo.WebSocketsChat.Common.Records {
 
-    public sealed class MessageRecord : ARecord {
-
-
-        //--- Fields ---
-        private string _jitter;
+    public sealed class MessageRecord {
 
         //--- Properties ---
-        public override string PK => CHANNEL_PREFIX + ChannelId;
-        public override string SK => TIMESTAMP_PREFIX + Timestamp.ToString("0000000000000000") + "|" + Jitter;
         public long Timestamp { get; set; }
         public string UserId { get; set; }
         public string ChannelId { get; set; }
         public string Message { get; set; }
-        public string Jitter {
-            get {
-                if(_jitter == null) {
-                    _jitter = GetRandomString(4);
-                }
-                return _jitter;
-            }
-            set => _jitter = value;
-        }
+        public string Jitter { get; set; }
     }
 }

@@ -16,21 +16,12 @@
  * limitations under the License.
  */
 
-using System.Collections.Generic;
-using Demo.WebSocketsChat.Common.DynamoDB;
-
 namespace Demo.WebSocketsChat.Common.Records {
 
-    public sealed class ConnectionRecord : ARecord, IRecordProjected<ConnectionRecord> {
+    public sealed class ConnectionRecord {
 
         //--- Properties ---
-        public override string PK => CONNECTION_PREFIX + ConnectionId;
-        public override string SK => INFO;
         public string ConnectionId { get; set; }
         public string UserId { get; set; }
-
-        //--- IProjectedRecord<ConnectionRecord> Members ---
-        IEnumerable<IProjection<ConnectionRecord>> IRecordProjected<ConnectionRecord>.Projections
-            => Projections<ConnectionRecord>((item => USER_PREFIX + item.UserId, item => CONNECTION_PREFIX + item.ConnectionId));
     }
 }

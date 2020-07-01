@@ -16,17 +16,11 @@
  * limitations under the License.
  */
 
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Amazon.DynamoDBv2.DocumentModel;
-
 namespace Demo.WebSocketsChat.Common.Records {
 
-    public sealed class UserRecord : ARecord {
+    public sealed class UserRecord {
 
         //--- Properties ---
-        public override string PK => USER_PREFIX + UserId;
-        public override string SK => INFO;
         public string UserId { get; set; }
         public string UserName { get; set; }
     }

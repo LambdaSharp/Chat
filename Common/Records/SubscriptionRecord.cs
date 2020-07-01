@@ -16,33 +16,13 @@
  * limitations under the License.
  */
 
-using System.Collections.Generic;
-using Demo.WebSocketsChat.Common.DynamoDB;
-
 namespace Demo.WebSocketsChat.Common.Records {
 
-    public sealed class SubscriptionRecord :
-        ARecord,
-        IRecordProjected<SubscriptionRecord>,
-        ISecondaryRecord<ChannelRecord>,
-        ISecondaryRecord<UserRecord>
-    {
+    public sealed class SubscriptionRecord {
 
         //--- Properties ---
-        public override string PK => CHANNEL_PREFIX + ChannelId;
-        public override string SK => USER_PREFIX + UserId;
         public string ChannelId { get; set; }
         public string UserId { get; set; }
         public long LastSeenTimestamp { get; set; }
-
-        //--- IProjectedRecord<ConnectionRecord> Members ---
-        IEnumerable<IProjection<SubscriptionRecord>> IRecordProjected<SubscriptionRecord>.Projections
-            => Projections<SubscriptionRecord>((item => USER_PREFIX + UserId, item => CHANNEL_PREFIX + ChannelId));
-
-        //--- ISecondaryRecord<ChannelRecord> Members ---
-        string ISecondaryRecord<ChannelRecord>.SKPrefix => USER_PREFIX;
-
-        //--- IProjectedRecord<UserRecord> Members ---
-        string ISecondaryRecord<UserRecord>.SKPrefix => CHANNEL_PREFIX;
     }
 }
