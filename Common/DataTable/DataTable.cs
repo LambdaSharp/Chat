@@ -151,6 +151,9 @@ namespace Demo.WebSocketsChat.Common.DataStore {
         #endregion
 
         #region Subscription Record
+        public async Task<SubscriptionRecord> GetSubscriptionAsync(string userId, string channelId, CancellationToken cancellationToken = default)
+            => Deserialize<SubscriptionRecord>(await _table.GetItemAsync(CHANNEL_PREFIX + channelId, USER_PREFIX + userId, cancellationToken));
+
         public Task CreateSubscriptionAsync(SubscriptionRecord record, CancellationToken cancellationToken = default)
             => PutItemsAsync(record, new[] {
                 (PK: CHANNEL_PREFIX + record.ChannelId, SK: USER_PREFIX + record.UserId),

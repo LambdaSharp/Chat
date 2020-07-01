@@ -26,45 +26,20 @@ namespace Demo.WebSocketsChat.Common {
 
     public class SendMessageRequest : AMessageRequest {
 
+        //--- Constructors ---
+        public SendMessageRequest() => Action = "send";
+
         //--- Properties ---
+        public string ChannelId { get; set; }
         public string Text { get; set; }
     }
 
     public class RenameUserRequest : AMessageRequest {
 
-        //--- Properties ---
-        public string UserName { get; set; }
-    }
-
-    public class NotifyResponse {
-
-        //--- Properties ---
-        public string Action { get; set; }
-    }
-
-    public class UserMessageResponse : NotifyResponse {
-
         //--- Constructors ---
-        public UserMessageResponse() => Action = "message";
-
-        //--- Properties ---
-        public string From { get; set; }
-        public string Text { get; set; }
-    }
-
-    public class UserNameResponse : NotifyResponse  {
-
-        //--- Constructors ---
-        public UserNameResponse() => Action = "username";
+        public RenameUserRequest() => Action = "rename";
 
         //--- Properties ---
         public string UserName { get; set; }
-    }
-
-    public class NotifyMessage {
-
-        //--- Properties ---
-        public string Message { get; set; }
-        public string ConnectionId { get; set; }
     }
 }

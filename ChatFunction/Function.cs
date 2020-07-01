@@ -27,7 +27,6 @@ using Demo.WebSocketsChat.Common;
 using Demo.WebSocketsChat.Common.Records;
 using System.Runtime.CompilerServices;
 using Demo.WebSocketsChat.Common.DataStore;
-using System.Collections.Generic;
 
 namespace Demo.WebSocketsChat.ChatFunction {
 
@@ -46,8 +45,8 @@ namespace Demo.WebSocketsChat.ChatFunction {
             _notifyQueueUrl = config.ReadSqsQueueUrl("NotifyQueue");
 
             // initialize AWS clients
-            _table = new DataTable(connectionsTableName, new AmazonDynamoDBClient());
             _sqsClient = new AmazonSQSClient();
+            _table = new DataTable(connectionsTableName, new AmazonDynamoDBClient());
         }
 
         public async Task OpenConnectionAsync(APIGatewayProxyRequest request, string userName = null) {
@@ -87,21 +86,18 @@ namespace Demo.WebSocketsChat.ChatFunction {
 
             // fetch all channels the user is subscribed to
             var subscriptions = await _table.GetUserSubscriptionsAsync(user.UserId);
-            var users = new Dictionary<string, UserRecord>();
             foreach(var subscription in subscriptions) {
 
                 // fetch all messages the user may have missed since last time they were connected
                 var messages = await _table.GetChannelMessagesAsync(subscription.ChannelId, subscription.LastSeenTimestamp);
                 foreach(var message in messages) {
 
-                    // fetch originating user record
-                    if(!users.TryGetValue(message.UserId, out var fromUser)) {
-                        fromUser = await _table.GetUserAsync(message.UserId);
-                        users.Add(message.UserId, fromUser);
-                    }
-
                     // notify user about missed messages
-                    await NotifyUserAsync(user, fromUser, message);
+                    await NotifyAsync(user.UserId, channelId: null, new UserMessageNotification {
+                        UserId = message.UserId,
+                        ChannelId = message.ChannelId,
+                        Text = message.Message
+                    });
                 }
             }
         }
@@ -114,11 +110,6 @@ namespace Demo.WebSocketsChat.ChatFunction {
 
             // delete closed connection record
             await _table.DeleteConnectionAsync(CurrentRequest.RequestContext.ConnectionId, user.UserId);
-
-            // notify all connections about user who left
-            if(user != null) {
-                await NotifyAllAsync("#host", $"{user.UserName} left");
-            }
         }
 
         public async Task SendMessageAsync(SendMessageRequest request) {
@@ -132,7 +123,11 @@ namespace Demo.WebSocketsChat.ChatFunction {
             }
 
             // notify all connections about new message
-            await NotifyAllAsync(user.UserName, request.Text);
+            await NotifyAsync(userId: null, channelId: request.ChannelId, new UserMessageNotification {
+                UserId = user.UserId,
+                ChannelId = request.ChannelId,
+                Text = request.Text
+            });
         }
 
         public async Task RenameUserAsync(RenameUserRequest request) {
@@ -155,35 +150,24 @@ namespace Demo.WebSocketsChat.ChatFunction {
             }
 
             // update user name
-            var oldName = user.UserName;
+            var oldUserName = user.UserName;
             user.UserName = request.UserName;
             await _table.UpdateUserAsync(user);
 
             // notify all connections about renamed user
-            await NotifyAllAsync("#host", $"{oldName} is now known as {user.UserName}");
+            await NotifyAsync(userId: null, channelId: null, new UserNameNotification {
+                UserId = user.UserId,
+                UserName = user.UserName,
+                OldUserName = oldUserName
+            });
         }
 
-        private Task NotifyUserAsync(UserRecord user, UserRecord from, MessageRecord message)
-
-            // TODO: missing code
-            => throw new NotImplementedException();
-
-        private Task NotifyAllAsync(string from, string message)
-            => NotifyAsync(new UserMessageResponse {
-                From = from,
-                Text = message
-            });
-
-        private Task NotifyUserNameAsync(string connectionId, string userName)
-            => NotifyAsync(new UserNameResponse {
-                UserName = userName
-            }, connectionId);
-
-        private Task NotifyAsync<T>(T response, string connectionId = null) where T : NotifyResponse
+        private Task NotifyAsync<T>(string userId, string channelId, T notification) where T : Notification
             => _sqsClient.SendMessageAsync(new Amazon.SQS.Model.SendMessageRequest {
-                MessageBody = LambdaSerializer.Serialize(new NotifyMessage {
-                    ConnectionId = connectionId,
-                    Message = LambdaSerializer.Serialize(response)
+                MessageBody = LambdaSerializer.Serialize(new BroadcastMessage {
+                    UserId = userId,
+                    ChannelId = channelId,
+                    Payload = LambdaSerializer.Serialize(notification)
                 }),
                 QueueUrl = _notifyQueueUrl
             });
