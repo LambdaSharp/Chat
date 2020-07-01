@@ -16,30 +16,16 @@
  * limitations under the License.
  */
 
-namespace Demo.WebSocketsChat.Common {
+namespace Demo.WebSocketsChat.Common.Notifications {
 
-    public abstract class AMessageRequest {
-
-        //--- Properties ---
-        public string Action { get; set; }
-    }
-
-    public class SendMessageRequest : AMessageRequest {
+    public class UserNameNotification : Notification  {
 
         //--- Constructors ---
-        public SendMessageRequest() => Action = "send";
+        public UserNameNotification() => Action = "username";
 
         //--- Properties ---
-        public string ChannelId { get; set; }
-        public string Text { get; set; }
-    }
-
-    public class RenameUserRequest : AMessageRequest {
-
-        //--- Constructors ---
-        public RenameUserRequest() => Action = "rename";
-
-        //--- Properties ---
+        public string UserId { get; set; }
         public string UserName { get; set; }
+        public string OldUserName { get; set; }
     }
 }

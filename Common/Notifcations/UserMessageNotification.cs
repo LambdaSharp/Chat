@@ -16,13 +16,7 @@
  * limitations under the License.
  */
 
-namespace Demo.WebSocketsChat.Common {
-
-    public class Notification {
-
-        //--- Properties ---
-        public string Action { get; set; }
-    }
+namespace Demo.WebSocketsChat.Common.Notifications {
 
     public class UserMessageNotification : Notification {
 
@@ -33,16 +27,5 @@ namespace Demo.WebSocketsChat.Common {
         public string UserId { get; set; }
         public string ChannelId { get; set; }
         public string Text { get; set; }
-    }
-
-    public class UserNameNotification : Notification  {
-
-        //--- Constructors ---
-        public UserNameNotification() => Action = "username";
-
-        //--- Properties ---
-        public string UserId { get; set; }
-        public string UserName { get; set; }
-        public string OldUserName { get; set; }
     }
 }

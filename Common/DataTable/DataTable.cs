@@ -37,6 +37,7 @@ namespace Demo.WebSocketsChat.Common.DataStore {
         private const string CONNECTION_PREFIX = "WS#";
         private const string TIMESTAMP_PREFIX = "WHEN#";
         private const string INFO = "INFO";
+        private const string USERS = "USERS";
 
         //--- Class Fields ---
         private readonly static Random _random = new Random();
@@ -97,19 +98,25 @@ namespace Demo.WebSocketsChat.Common.DataStore {
         public async Task<UserRecord> GetUserAsync(string userId, CancellationToken cancellationToken = default)
             => Deserialize<UserRecord>(await _table.GetItemAsync(USER_PREFIX + userId, INFO, cancellationToken));
 
+        public Task<IEnumerable<UserRecord>> GetAllUserAsync(CancellationToken cancellationToken = default)
+            => DoSearchAsync<UserRecord>(_table.Query(USERS, new QueryFilter("SK", QueryOperator.BeginsWith, USER_PREFIX)), cancellationToken);
+
         public Task CreateUserAsync(UserRecord record, CancellationToken cancellationToken = default)
             => PutItemsAsync(record, new[] {
-                (PK: USER_PREFIX + record.UserId, SK: INFO)
+                (PK: USER_PREFIX + record.UserId, SK: INFO),
+                (PK: USERS, SK: USER_PREFIX + record.UserId)
             }, CreateItemConfig, cancellationToken);
 
         public Task UpdateUserAsync(UserRecord record, CancellationToken cancellationToken = default)
             => PutItemsAsync(record, new[] {
-                (PK: USER_PREFIX + record.UserId, SK: INFO)
+                (PK: USER_PREFIX + record.UserId, SK: INFO),
+                (PK: USERS, SK: USER_PREFIX + record.UserId)
             }, UpdateItemConfig, cancellationToken);
 
         public Task DeleteUserAsync(string userId, CancellationToken cancellationToken = default)
             => DeleteItemsAsync(new[] {
-                (PK: USER_PREFIX + userId, SK: INFO )
+                (PK: USER_PREFIX + userId, SK: INFO),
+                (PK: USERS, SK: USER_PREFIX + userId)
             }, cancellationToken);
         #endregion
 
@@ -195,6 +202,9 @@ namespace Demo.WebSocketsChat.Common.DataStore {
 
         public Task<IEnumerable<MessageRecord>> GetChannelMessagesAsync(string channelId, long sinceTimestamp, CancellationToken cancellationToken = default)
             => DoSearchAsync<MessageRecord>(_table.Query(CHANNEL_PREFIX + channelId, new QueryFilter("SK", QueryOperator.GreaterThanOrEqual, TIMESTAMP_PREFIX + sinceTimestamp.ToString("0000000000000000"))), cancellationToken);
+
+        public Task<IEnumerable<SubscriptionRecord>> GetChannelSubscriptionsAsync(string channelId, CancellationToken cancellationToken = default)
+            => DoSearchAsync<SubscriptionRecord>(_table.Query(CHANNEL_PREFIX + channelId, new QueryFilter("SK", QueryOperator.BeginsWith, USER_PREFIX)), cancellationToken);
         #endregion
 
         private Task PutItemsAsync<T>(T item, IEnumerable<(string PK, string SK)> keys, PutItemOperationConfig config, CancellationToken cancellationToken = default) {
