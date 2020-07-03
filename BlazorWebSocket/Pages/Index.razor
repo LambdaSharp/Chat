@@ -37,7 +37,7 @@
     <br />
     <div>
         <ul class="list-group">
-            @foreach(var message in Enumerable.Reverse(_messages).Select((x, i) => new { Value = x, Index = i })) {
+            @foreach(var message in _messages.OrderByDescending(message => message.Timestamp).Select((x, i) => new { Value = x, Index = i })) {
                 <li class=@string.Format("list-group-item {0}", (message.Index % 2 == 0) ? "list-group-item-secondary" : "list-group-item-light")>
                     @if(message.Value.UserId == "#host") {
                         <p><span style="color:blue">Host </span> <small class="text-muted">@DateTimeOffset.FromUnixTimeMilliseconds(message.Value.Timestamp).ToString("HH:mm")</small> <br />@message.Value.Text</p>
