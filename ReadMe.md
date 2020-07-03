@@ -193,10 +193,11 @@ The message record is created for each message sent by a user on a channel. The 
 - [x] Remember a user's name from a previous session using local storage.
 - [x] Restrict access to S3 bucket to only allow CloudFront.
 - [x] Show previous messages when a user connects.
+- [x] Route WebSocket requests via CloudFront.
 - [ ] Allow users to create or join chat rooms.
-- [ ] Route API Gateway WebSocket requests via CloudFront.
 - [ ] Add UI for logging in.
 - [ ] Add Cognito user pool for user management.
+- [ ] Secure WebSocket so they must come through CloudFront.
 
 ## Acknowledgements
 
