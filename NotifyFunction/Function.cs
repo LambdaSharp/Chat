@@ -28,55 +28,64 @@ using Amazon.Runtime;
 using LambdaSharp;
 using Demo.WebSocketsChat.Common;
 using LambdaSharp.SimpleQueueService;
+using Demo.WebSocketsChat.Common.DataStore;
 
 namespace Demo.WebSocketsChat.NotifyFunction {
 
-    public class Function : ALambdaQueueFunction<NotifyMessage> {
+    public sealed class Function : ALambdaQueueFunction<BroadcastMessage> {
 
         //--- Fields ---
         private IAmazonApiGatewayManagementApi _amaClient;
-        private ConnectionsTable _table;
+        private DataTable _dataTable;
 
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
 
             // read configuration settings
-            var connectionsTableName = config.ReadDynamoDBTableName("ConnectionsTable");
+            var dataTableName = config.ReadDynamoDBTableName("DataTable");
             var webSocketUrl = config.ReadText("Module::WebSocket::Url");
 
             // initialize AWS clients
             _amaClient = new AmazonApiGatewayManagementApiClient(new AmazonApiGatewayManagementApiConfig {
                 ServiceURL = webSocketUrl
             });
-            _table = new ConnectionsTable(
-                connectionsTableName,
-                new AmazonDynamoDBClient()
-            );
+            _dataTable = new DataTable(dataTableName, new AmazonDynamoDBClient());
         }
 
-        public override async Task ProcessMessageAsync(NotifyMessage message) {
+        public override async Task ProcessMessageAsync(BroadcastMessage message) {
 
             // prepare message by serializing it
-            var messageBytes = Encoding.UTF8.GetBytes(message.Message);
+            var messageBytes = Encoding.UTF8.GetBytes(message.Payload);
+            if(message.UserId != null) {
 
-            // determine if message should be sent to one connection or all connections
-            if(message.ConnectionId != null) {
-                await SendMessageToConnection(messageBytes, message.ConnectionId);
+                // send message to user on all connections
+                var connections = await _dataTable.GetUserConnectionsAsync(message.UserId);
+                LogInfo($"sending message to user '{message.UserId}' with {connections.Count()} connections");
+                await Task.WhenAll(connections.Select(connection => SendMessageToConnection(messageBytes, connection.ConnectionId)));
+            } else if(message.ChannelId != null) {
+
+                // send message to all users on the channel
+                var subscriptions = await _dataTable.GetChannelSubscriptionsAsync(message.ChannelId);
+                LogInfo($"sending a message to channel {message.ChannelId} with {subscriptions.Count()} subscriptions");
+                await Task.WhenAll(subscriptions.Select(async subscription => {
+                    var connections = await _dataTable.GetUserConnectionsAsync(subscription.UserId);
+                    LogInfo($"sending message to user '{subscription.UserId}' with {connections.Count()} connections");
+                    await Task.WhenAll(connections.Select(connection => SendMessageToConnection(messageBytes, connection.ConnectionId)));
+                }));
             } else {
 
-                // enumerate open connections
-                var connections = await _table.GetAllRowsAsync();
-                LogInfo($"Found {connections.Count():N0} open connection(s)");
-
-                // attempt to send message on all open connections simultaneously
-                var outcomes = await Task.WhenAll(
-                    connections.Select(connectionId => SendMessageToConnection(messageBytes, connectionId))
-                );
-                LogInfo($"Message sent to {outcomes.Count(outcome => outcome):N0} connections");
+                // send message to all users
+                var users = await _dataTable.GetAllUsersAsync();
+                LogInfo($"sending message to all {users.Count()} users");
+                await Task.WhenAll(users.Select(async user => {
+                    var connections = await _dataTable.GetUserConnectionsAsync(user.UserId);
+                    LogInfo($"sending message to user '{user.UserId}' with {connections.Count()} connections");
+                    await Task.WhenAll(connections.Select(connection => SendMessageToConnection(messageBytes, connection.ConnectionId)));
+                }));
             }
         }
 
-        private  async Task<bool> SendMessageToConnection(byte[] messageBytes, string connectionId) {
+        private async Task SendMessageToConnection(byte[] messageBytes, string connectionId) {
 
             // attempt to send serialized message to connection
             try {
@@ -89,12 +98,9 @@ namespace Demo.WebSocketsChat.NotifyFunction {
 
                 // HTTP Gone status code indicates the connection has been closed
                 // connection will be removed by ChatFunction when the websocket gets closed
-                return false;
             } catch(Exception e) {
                 LogErrorAsWarning(e, "PostToConnectionAsync() failed on connection {0}", connectionId);
-                return false;
             }
-            return true;
         }
     }
 }

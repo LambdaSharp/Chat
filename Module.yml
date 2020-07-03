@@ -18,23 +18,49 @@ Module: Demo.WebSocketsChat
 Pragmas:
   - Overrides:
       Module::WebSocket.RouteSelectionExpression: $request.body.Action
+      Module::WebSocket::StageName: chat
 Using:
   - Module: LambdaSharp.S3.IO@lambdasharp
 Items:
 
   # Connection Table
-  - Resource: ConnectionsTable
+  - Resource: DataTable
     Scope: all
     Type: AWS::DynamoDB::Table
     Allow: ReadWrite
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: ConnectionId
+        - AttributeName: PK
           AttributeType: S
+
+        - AttributeName: SK
+          AttributeType: S
+
+        - AttributeName: GS1PK
+          AttributeType: S
+
+        - AttributeName: GS1SK
+          AttributeType: S
+
       KeySchema:
-        - AttributeName: ConnectionId
+        - AttributeName: PK
           KeyType: HASH
+
+        - AttributeName: SK
+          KeyType: RANGE
+
+      GlobalSecondaryIndexes:
+        - IndexName: GS1
+          KeySchema:
+            - AttributeName: GS1PK
+              KeyType: HASH
+
+            - AttributeName: GS1SK
+              KeyType: RANGE
+
+          Projection:
+            ProjectionType: ALL
 
   # Function for handling web-socket requests
   - Function: ChatFunction
@@ -164,6 +190,11 @@ Items:
         Events:
           - s3:ObjectCreated:*
           - s3:ObjectRemoved:*
+
+  - Function: Finalizer
+    Description: Initialize DynamoDB table with default rows
+    Memory: 256
+    Timeout: 30
 
   # Export website url
   - Variable: WebsiteUrl

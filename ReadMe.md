@@ -6,7 +6,7 @@
 
 This LambdaSharp module creates a web chat front-end using [ASP.NET Core Blazor WebAssembly](https://docs.microsoft.com/en-us/aspnet/core/blazor/get-started) and back-end using [API Gateway V2 WebSocket](https://aws.amazon.com/blogs/compute/announcing-websocket-apis-in-amazon-api-gateway/) as self-contained CloudFormation template. The front-end is served by an S3 bucket and secured by a CloudFront distribution. The front-end code is delivered as [WebAssembly](https://webassembly.org/) using ASP.NET Core Blazor. The back-end uses API Gateway V2 WebSocket to facilitate communication between clients. The code and assets for the front-end are built by `dotnet` and then copied to the S3 bucket during deployment. Afterwards, a CloudFront distribution is created to provide secure access over `https://` to the front-end. Finally, an API Gateway V2 WebSocket is deployed with two Lambda functions that handle WebSocket connections and message notifications.
 
-> **NOTE:** This LambdaSharp module requires .NET Core 3.1.300 and LambdaSharp.Tool 0.8.0.2, or later.
+> **NOTE:** This LambdaSharp module requires .NET Core 3.1.300 and LambdaSharp.Tool 0.8.0.5, or later.
 
 ![WebChat](Assets/LambdaSharpWebChat.png)
 
@@ -34,13 +34,14 @@ During the build phase, LambdaSharp extracts the message schema from the .NET im
       Invoke: OpenConnectionAsync
 
     - WebSocket: $disconnect
-      Invoke: CloseConnectionAsync
+      Inpvoke: CloseConnectionAsync
 
     - WebSocket: send
       Invoke: SendMessageAsync
 ```
 
-Defining the JSON schema for the web-socket route doesn't require any special effort beyond some standard JSON annotations using the corresponding type.
+Defining the JSON schema for the web-socket route doesn't require any special effort.
+
 ```csharp
 public abstract class AMessageRequest {
 
@@ -50,12 +51,12 @@ public abstract class AMessageRequest {
 
 public class SendMessageRequest : AMessageRequest {
 
-    //--- Properties ---
-    public string Text { get; set; }
-}
+    //--- Constructors ---
+    public SendMessageRequest() => Action = "send";
 
-public async Task SendMessageAsync(SendMessageRequest request) {
-  ...
+    //--- Properties ---
+    public string ChannelId { get; set; }
+    public string Text { get; set; }
 }
 ```
 
@@ -63,7 +64,7 @@ public async Task SendMessageAsync(SendMessageRequest request) {
 
 The following happens when the module is deployed.
 
-1. Create a DynamoDB table to track open connections.
+1. Create a DynamoDB table with a secondary index to store application records.
 1. Deploy the `ChatFunction` to handle web-socket requests.
 1. Deploy `NotifyFunction` to broadcast messages to all open connections.
 1. Create a private S3 bucket.
@@ -87,6 +88,7 @@ This JSON message sends a _"Hello World!"_ notification to all participants:
 ```json
 {
     "Action": "send",
+    "ChannelId": "General",
     "Text": "Hello World!"
 }
 ```
@@ -99,13 +101,102 @@ This JSON message changes the user name to _Bob_ for the current user:
 }
 ```
 
+## DynamoDB Table
+
+### User Record
+
+Every user has exactly one user record associated with them. Each user is uniquely identified by the value in the `UserId` column. The user name can be customized by the user and may not be unique across all users.
+
+The primary index is used to resolve user records by `UserId`.
+
+The secondary index is used to list all existing users.
+
+|Column       |Value
+|-------------|------------------
+|PK           |"USER#{UserId}"
+|SK           |"INFO"
+|GS1PK        |"USERS"
+|GS1SK        |"USER#{UserId}"
+|UserId       |String
+|UserName     |String
+
+
+### Connection Record
+
+A connection record is created by a new connection is opened wit a user. A user can have multiple, simultaneous connections active. Each connection is uniquely identified by the value in the `ConnectionId` column.
+
+The primary index is used to resolve connections by `ConnectionId`.
+
+The secondary index is used to find all open connections per `UserId`.
+
+|Column       |Value
+|-------------|------------------
+|PK           |"WS#{ConnectionId}"
+|SK           |"INFO"
+|GS1PK        |"USER#{UserId}"
+|GS1SK        |"WS#{ConnectionId}"
+|ConnectionId |String
+|UserId       |String
+
+### Channel Record
+
+The channel record is created for each channel. The `Finalizer` ensures that the `General` channel always exists by default. Each channel is uniquely identified by the value in the `ChannelId` column.
+
+The primary index is used to resolve channels by `ChannelId`.
+
+The secondary index is used to find all existing channels.
+
+|Column       |Value
+|-------------|------------------
+|PK           |"ROOM#{ChannelId}"
+|SK           |"INFO"
+|GS1PK        |"CHANNELS"
+|GS1SK        |"ROOM#{ChannelId}"
+|ChannelId    |String
+|ChannelName  |String
+
+### Subscription Record
+
+The subscription record is created when a user subscribes to a channel. The value in the `LastSeenTimestamp` column is the UNIX epoch timestamp in milliseconds for the last message seen by the user in the given channel.
+
+The primary index is used for finding all users subscribed by `ChannelId`.
+
+The secondary index is used fod finding all channels subscribed by `UserId`.
+
+|Column           |Value
+|-----------------|------------------
+|PK               |"ROOM#{ChannelId}"
+|SK               |"USER#{UserId}"
+|GS1PK            |"USER#{UserId}"
+|GS1SK            |"ROOM#{ChannelId}"
+|ChannelId        |String
+|UserId           |String
+|LastSeenTimestamp|Number
+
+### Message Record
+
+The message record is created for each message sent by a user on a channel. The value in the `Timestamp` column is the UNIX epoch timestamp in milliseconds when the message was sent by the user. The value in the `Jitter` column is used to minimize risk of row conflicts, in case a user sends two messages at the same time.
+
+|Column       |Value
+|-------------|------------------
+|PK           |"ROOM#{ChannelId}"
+|SK           |"WHEN#{Timestamp:0000000000000000}#{Jitter}"
+|UserId       |String
+|ChannelId    |String
+|Timestamp    |Number
+|Message      |String
+|Jitter       |String
+
+
 ## Future Improvements
 - [x] Allow users to rename themselves.
 - [x] Remember a user's name from a previous session using local storage.
 - [x] Restrict access to S3 bucket to only allow CloudFront.
-- [ ] Show previous messages when a user connects.
+- [x] Show previous messages when a user connects.
 - [ ] Allow users to create or join chat rooms.
 - [ ] Route API Gateway WebSocket requests via CloudFront.
+- [ ] Add UI for logging in.
+- [ ] Add Cognito user pool for user management.
 
 ## Acknowledgements
 
