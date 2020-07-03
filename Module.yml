@@ -145,15 +145,23 @@ Items:
     Scope: InvalidateCloudFrontFunction
     Properties:
       DistributionConfig:
-        Comment: !Sub "CloudFront Distribution pointing to the S3 bucket for ${Module::Id}"
+        Comment: !Sub "CloudFront Distribution for WebChat app (${AWS::StackName})"
+        Enabled: true
+        HttpVersion: http2
+        DefaultRootObject: index.html
+        PriceClass: PriceClass_100
         Origins:
           - Id: S3Origin
             DomainName: !GetAtt WebsiteBucket.DomainName
             S3OriginConfig:
               OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${WebsiteCloudFrontIdentity}"
-        Enabled: true
-        HttpVersion: http2
-        DefaultRootObject: index.html
+
+          - Id: WebSocket
+            DomainName: !Ref Module::WebSocket::DomainName
+            CustomOriginConfig:
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+
         DefaultCacheBehavior:
           AllowedMethods:
             - GET
@@ -166,7 +174,20 @@ Items:
             Cookies:
               Forward: none
           ViewerProtocolPolicy: redirect-to-https
-        PriceClass: PriceClass_100
+
+        CacheBehaviors:
+          - AllowedMethods: [ "GET", "HEAD" ]
+            PathPattern: !Ref Module::WebSocket::StageName
+            TargetOriginId: WebSocket
+            ForwardedValues:
+              QueryString: true
+              Headers:
+                - Access-Control-Request-Headers
+                - Access-Control-Request-Method
+                - Origin
+                - Authorization
+            ViewerProtocolPolicy: https-only
+
     DependsOn: WebsiteBucketPolicy
 
   - Resource: WebsiteCloudFrontPermissions
