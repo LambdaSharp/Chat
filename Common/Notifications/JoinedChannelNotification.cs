@@ -18,7 +18,7 @@
 
 namespace Demo.WebSocketsChat.Common.Notifications {
 
-    public sealed class JoinedChannelNotification : Notification {
+    public sealed class JoinedChannelNotification : ANotification {
 
         //--- Constructors ---
         public JoinedChannelNotification() => Action = "joined";

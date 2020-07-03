@@ -18,7 +18,7 @@
 
 namespace Demo.WebSocketsChat.Common.Notifications {
 
-    public class Notification {
+    public abstract class ANotification {
 
         //--- Properties ---
         public string Action { get; set; }

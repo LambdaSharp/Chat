@@ -18,7 +18,7 @@
 
 namespace Demo.WebSocketsChat.Common.Notifications {
 
-    public sealed class UserNameChangedNotification : Notification  {
+    public sealed class UserNameChangedNotification : ANotification  {
 
         //--- Constructors ---
         public UserNameChangedNotification() => Action = "username";

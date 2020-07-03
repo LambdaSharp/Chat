@@ -200,7 +200,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
             });
         }
 
-        private Task NotifyAsync<T>(string userId, string channelId, T notification, int delay = 0) where T : Notification
+        private Task NotifyAsync<T>(string userId, string channelId, T notification, int delay = 0) where T : ANotification
             => _sqsClient.SendMessageAsync(new Amazon.SQS.Model.SendMessageRequest {
                     MessageBody = LambdaSerializer.Serialize(new BroadcastMessage {
                         UserId = userId,

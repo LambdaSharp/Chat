@@ -18,7 +18,7 @@
 
 namespace Demo.WebSocketsChat.Common.Notifications {
 
-    public sealed class WelcomeNotification : Notification  {
+    public sealed class WelcomeNotification : ANotification  {
 
         //--- Constructors ---
         public WelcomeNotification() => Action = "welcome";
