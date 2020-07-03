@@ -36,7 +36,7 @@ namespace Demo.WebSocketsChat.NotifyFunction {
 
         //--- Fields ---
         private IAmazonApiGatewayManagementApi _amaClient;
-        private DataTable _table;
+        private DataTable _dataTable;
 
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
@@ -49,7 +49,7 @@ namespace Demo.WebSocketsChat.NotifyFunction {
             _amaClient = new AmazonApiGatewayManagementApiClient(new AmazonApiGatewayManagementApiConfig {
                 ServiceURL = webSocketUrl
             });
-            _table = new DataTable(dataTableName, new AmazonDynamoDBClient());
+            _dataTable = new DataTable(dataTableName, new AmazonDynamoDBClient());
         }
 
         public override async Task ProcessMessageAsync(BroadcastMessage message) {
@@ -59,22 +59,27 @@ namespace Demo.WebSocketsChat.NotifyFunction {
             if(message.UserId != null) {
 
                 // send message to user on all connections
-                var connections = await _table.GetUserConnectionsAsync(message.UserId);
+                var connections = await _dataTable.GetUserConnectionsAsync(message.UserId);
+                LogInfo($"sending message to user '{message.UserId}' with {connections.Count()} connections");
                 await Task.WhenAll(connections.Select(connection => SendMessageToConnection(messageBytes, connection.ConnectionId)));
             } else if(message.ChannelId != null) {
 
                 // send message to all users on the channel
-                var subscriptions = await _table.GetChannelSubscriptionsAsync(message.ChannelId);
+                var subscriptions = await _dataTable.GetChannelSubscriptionsAsync(message.ChannelId);
+                LogInfo($"sending a message to channel {message.ChannelId} with {subscriptions.Count()} subscriptions");
                 await Task.WhenAll(subscriptions.Select(async subscription => {
-                    var connections = await _table.GetUserConnectionsAsync(message.UserId);
+                    var connections = await _dataTable.GetUserConnectionsAsync(subscription.UserId);
+                    LogInfo($"sending message to user '{subscription.UserId}' with {connections.Count()} connections");
                     await Task.WhenAll(connections.Select(connection => SendMessageToConnection(messageBytes, connection.ConnectionId)));
                 }));
             } else {
 
                 // send message to all users
-                var users = await _table.GetAllUserAsync();
+                var users = await _dataTable.GetAllUserAsync();
+                LogInfo($"sending message to all {users.Count()} users");
                 await Task.WhenAll(users.Select(async user => {
-                    var connections = await _table.GetUserConnectionsAsync(message.UserId);
+                    var connections = await _dataTable.GetUserConnectionsAsync(user.UserId);
+                    LogInfo($"sending message to user '{user.UserId}' with {connections.Count()} connections");
                     await Task.WhenAll(connections.Select(connection => SendMessageToConnection(messageBytes, connection.ConnectionId)));
                 }));
             }

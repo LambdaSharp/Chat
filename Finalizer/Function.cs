@@ -10,7 +10,7 @@ namespace Demo.WebSocketsChat.Finalizer {
     public sealed class Function : ALambdaFinalizerFunction {
 
         //--- Fields ---
-        private DataTable _table;
+        private DataTable _dataTable;
 
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
@@ -19,7 +19,7 @@ namespace Demo.WebSocketsChat.Finalizer {
             var dataTableName = config.ReadDynamoDBTableName("DataTable");
 
             // initialize AWS clients
-            _table = new DataTable(dataTableName, new AmazonDynamoDBClient());
+            _dataTable = new DataTable(dataTableName, new AmazonDynamoDBClient());
         }
 
         public override Task CreateDeployment(FinalizerProperties current) {
@@ -32,7 +32,7 @@ namespace Demo.WebSocketsChat.Finalizer {
 
         private async Task CreateGeneralChannelAsync() {
             try {
-                await _table.CreateChannelAsync(new ChannelRecord {
+                await _dataTable.CreateChannelAsync(new ChannelRecord {
                     ChannelId = "General",
                     ChannelName = "General"
                 });

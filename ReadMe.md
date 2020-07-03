@@ -200,9 +200,11 @@ Global-Users (Index)
 - [x] Allow users to rename themselves.
 - [x] Remember a user's name from a previous session using local storage.
 - [x] Restrict access to S3 bucket to only allow CloudFront.
-- [ ] Show previous messages when a user connects.
+- [x] Show previous messages when a user connects.
 - [ ] Allow users to create or join chat rooms.
 - [ ] Route API Gateway WebSocket requests via CloudFront.
+- [ ] Add UI for logging in.
+- [ ] Add Cognito user pool for user management.
 
 ## Acknowledgements
 

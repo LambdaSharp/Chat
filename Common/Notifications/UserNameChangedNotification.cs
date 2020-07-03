@@ -18,14 +18,14 @@
 
 namespace Demo.WebSocketsChat.Common.Notifications {
 
-    public sealed class UserMessageNotification : Notification {
+    public sealed class UserNameChangedNotification : Notification  {
 
         //--- Constructors ---
-        public UserMessageNotification() => Action = "message";
+        public UserNameChangedNotification() => Action = "username";
 
         //--- Properties ---
         public string UserId { get; set; }
-        public string ChannelId { get; set; }
-        public string Text { get; set; }
+        public string UserName { get; set; }
+        public string OldUserName { get; set; }
     }
 }

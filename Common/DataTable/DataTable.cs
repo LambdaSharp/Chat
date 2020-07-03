@@ -38,6 +38,7 @@ namespace Demo.WebSocketsChat.Common.DataStore {
         private const string TIMESTAMP_PREFIX = "WHEN#";
         private const string INFO = "INFO";
         private const string USERS = "USERS";
+        private const string CHANNELS = "ROOMS";
 
         //--- Class Fields ---
         private readonly static Random _random = new Random();
@@ -138,12 +139,16 @@ namespace Demo.WebSocketsChat.Common.DataStore {
         #endregion
 
         #region Channel Record
-        public async Task<UserRecord> GetChannelAsync(string channelId, CancellationToken cancellationToken = default)
-            => Deserialize<UserRecord>(await _table.GetItemAsync(CHANNEL_PREFIX + channelId, INFO, cancellationToken));
+        public async Task<ChannelRecord> GetChannelAsync(string channelId, CancellationToken cancellationToken = default)
+            => Deserialize<ChannelRecord>(await _table.GetItemAsync(CHANNEL_PREFIX + channelId, INFO, cancellationToken));
+
+        public Task<IEnumerable<ChannelRecord>> GetAllChannelsAsync(CancellationToken cancellationToken = default)
+            => DoSearchAsync<ChannelRecord>(_table.Query(CHANNELS, new QueryFilter("SK", QueryOperator.BeginsWith, CHANNEL_PREFIX)), cancellationToken);
 
         public Task CreateChannelAsync(ChannelRecord record, CancellationToken cancellationToken = default)
             => PutItemsAsync(record, new[] {
-                (PK: CHANNEL_PREFIX + record.ChannelId, SK: INFO)
+                (PK: CHANNEL_PREFIX + record.ChannelId, SK: INFO),
+                (PK: CHANNELS, SK: CHANNEL_PREFIX + record.ChannelId)
             }, CreateItemConfig, cancellationToken);
 
         public Task UpdateChannelAsync(ChannelRecord record, CancellationToken cancellationToken = default)
