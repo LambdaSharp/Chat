@@ -99,7 +99,7 @@ namespace Demo.WebSocketsChat.Common.DataStore {
         public async Task<UserRecord> GetUserAsync(string userId, CancellationToken cancellationToken = default)
             => Deserialize<UserRecord>(await _table.GetItemAsync(USER_PREFIX + userId, INFO, cancellationToken));
 
-        public Task<IEnumerable<UserRecord>> GetAllUserAsync(CancellationToken cancellationToken = default)
+        public Task<IEnumerable<UserRecord>> GetAllUsersAsync(CancellationToken cancellationToken = default)
             => DoSearchAsync<UserRecord>(_table.Query(USERS, new QueryFilter("SK", QueryOperator.BeginsWith, USER_PREFIX)), cancellationToken);
 
         public Task CreateUserAsync(UserRecord record, CancellationToken cancellationToken = default)
@@ -193,7 +193,7 @@ namespace Demo.WebSocketsChat.Common.DataStore {
 
             // store record
             return PutItemsAsync(record, new[] {
-                (PK: CHANNEL_PREFIX + record.ChannelId, SK: TIMESTAMP_PREFIX + record.Timestamp.ToString("0000000000000000") + "|" + record.Jitter)
+                (PK: CHANNEL_PREFIX + record.ChannelId, SK: TIMESTAMP_PREFIX + record.Timestamp.ToString("0000000000000000") + "#" + record.Jitter)
             }, CreateItemConfig, cancellationToken);
         }
         #endregion

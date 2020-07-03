@@ -75,7 +75,7 @@ namespace Demo.WebSocketsChat.NotifyFunction {
             } else {
 
                 // send message to all users
-                var users = await _dataTable.GetAllUserAsync();
+                var users = await _dataTable.GetAllUsersAsync();
                 LogInfo($"sending message to all {users.Count()} users");
                 await Task.WhenAll(users.Select(async user => {
                     var connections = await _dataTable.GetUserConnectionsAsync(user.UserId);

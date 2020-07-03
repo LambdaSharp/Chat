@@ -101,99 +101,66 @@ This JSON message changes the user name to _Bob_ for the current user:
 
 ## DynamoDB Table
 
-* `CreateUser(name)`
-* `GetUser(user)`
-* `GetSubscribedChannels(user)`
-* `GetMessagesSince(channel, timestamp)`
-* `GetUserConnections(user)`
-* `GetChannelUsers(channel)`
-* `GetChannel(channel)`
-* `JoinChannel(user, channel)`
-* `LeaveChannel(user, channel)`
-* `CreateMessage(user, channel, text)`
+### User Record
 
-Extra Credit
-* `GetAllChannels()`
-* `CreateChannel(name)`
-* `DeleteChannel(channel)`
-
-### Primary Records
-
-**User Record**
 |Column       |Value
 |-------------|------------------
-|PK           |"USER#{user-id}"
-|SK           |"INFO"
 |UserId       |string
 |UserName     |string
 
-**Connection Record**
+|PK                   |SK                 |Query
+|---------------------|-------------------|--------------
+|"USERS"              |"USER#{user-id}"   |`GetAllUsers()`
+|"USER#{user-id}"     |"INFO"             |`GetUser(userId)`
+
+### Connection Record
 |Column       |Value
 |-------------|------------------
-|PK           |"WS#{connection-id}"
-|SK           |"INFO"
 |ConnectionId |string
 |UserId       |string
 
-**Channel Record**
+|PK                   |SK                   |Query
+|---------------------|---------------------|--------------
+|"WS#{connection-id}" |"INFO"               |`GetConnection(connectionId)`
+|"USER#{user-id}"     |"WS#{connection-id}" |`GetUserConnections(userId)`
+
+### Channel Record
 |Column       |Value
 |-------------|------------------
-|PK           |"ROOM#{room-id}"
+|PK           |
 |SK           |"INFO"
 |ChannelId    |string
 |ChannelName  |string
 
-### Secondary Records
+|PK                   |SK                 |Query
+|---------------------|-------------------|--------------
+|"CHANNELS"           |"ROOM#{room-id}"   |`GetAllChannels()`
+|"ROOM#{room-id}"     |"INFO"             |`GetChannel(channelId)`
 
-**Subscription Record**
+### Subscription Record
 |Column           |Value
 |-----------------|------------------
-|PK               |"ROOM#{room-id}"
-|SK               |"USER#{user-id}"
 |ChannelId        |string
 |UserId           |string
 |LastSeenTimestamp|timestamp
 
-**Message Record**
+|PK                   |SK                 |Query
+|---------------------|-------------------|--------------
+|"ROOM#{room-id}"     |"USER#{user-id}"   |`GetChannelSubscriptions(channelId)`, `GetSubscription(channelId, userId)`
+|"USER#{user-id}"     |"ROOM#{room-id}"   |`GetUserSubscriptions(userId)`
+
+### Message Record
 |Column       |Value
 |-------------|------------------
-|PK           |"ROOM#{room-id}"
-|SK           |"WHEN#{timestamp:0000000000000000}|{jitter}"
 |UserId       |string
 |ChannelId    |string
 |Timestamp    |number
 |Message      |string
 |Jitter       |string
 
-### Projected Records
-
-**User-to-Connection Record**
-|Column       |Value
-|-------------|------------------
-|PK           |"USER#{user-id}"
-|SK           |"WS#{connection-id}"
-|ConnectionId |string
-|UserId       |string
-
-**User-to-Channel Record**
-|Column   |Value
-|---------|------------------
-|PK       |"USER#{user-id}"
-|SK       |"ROOM#{room-id}"
-|ChannelId        |string
-|UserId           |string
-|LastSeenTimestamp|timestamp
-
-### TODO: not implemented
-
-Global-Channels (Index)
-* PK: "GLOBAL"
-* SK: "ROOM#{room-id}"
-
-
-Global-Users (Index)
-* PK: "GLOBAL"
-* SK: "USER#{user-id}"
+|PK                   |SK                                           |Query
+|---------------------|---------------------------------------------|--------------
+|"ROOM#{room-id}"     |"WHEN#{timestamp:0000000000000000}#{jitter}" |`GetChannelMessagesSince(channelId, sinceTimestamp)`
 
 
 ## Future Improvements
