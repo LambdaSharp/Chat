@@ -93,15 +93,6 @@ Items:
     Type: AWS::SQS::Queue
     Allow: Send,Receive
 
-  # Write the site configuration settings to a JSON file in the S3 bucket
-  - Resource: WebsiteConfigJson
-    Type: LambdaSharp::S3::WriteJson
-    Properties:
-      Bucket: !Ref WebsiteBucket
-      Key: config.json
-      Contents:
-        ServerUri: !Ref WebSocketUrl
-
   # Bucket to host website
   - Resource: WebsiteBucket
     Description: S3 bucket for hosting website assets

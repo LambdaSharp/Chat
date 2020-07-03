@@ -64,7 +64,6 @@
     //--- Fields ---
     private readonly List<UserMessageChangedNotification> _messages = new List<UserMessageChangedNotification>();
     private readonly WebSocketDispatch _websocketDispatch = new WebSocketDispatch();
-    private Uri _serverUri;
 
     //--- Properties ---
     private string ChatMessage { get; set; }
@@ -72,13 +71,11 @@
     private string UserName { get; set; }
 
     private Uri ServerUri => string.IsNullOrEmpty(UserId)
-        ? _serverUri
-        : new Uri($"{_serverUri}?userId={Uri.EscapeUriString(UserId)}");
+        ? new Uri($"wss://{Http.BaseAddress.Host}/chat")
+        : new Uri($"wss://{Http.BaseAddress.Host}/chat?userId={Uri.EscapeUriString(UserId)}");
 
     //--- Methods ---
     protected override async Task OnInitializedAsync() {
-        var config = await Http.GetFromJsonAsync<Config>("config.json");
-        _serverUri = new Uri(config.ServerUri);
 
         // attempt to restore user name from browser local storage
         var userId = await LocalStorage.GetItemAsync<string>("UserId");
