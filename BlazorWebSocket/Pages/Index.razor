@@ -118,15 +118,14 @@
 
             // update our user name
             UserName = username.UserName;
-        } else {
-
-            // show message about renamed user
-            _messages.Add(new UserMessageChangedNotification {
-                UserId = "#host",
-                Text = $"{username.OldUserName} is now knows as {username.UserName}",
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-            });
         }
+
+        // show message about renamed user
+        _messages.Add(new UserMessageChangedNotification {
+            UserId = "#host",
+            Text = $"{username.OldUserName} is now known as {username.UserName}",
+            Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        });
 
         // update user interface
         StateHasChanged();
