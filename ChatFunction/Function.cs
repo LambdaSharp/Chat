@@ -88,7 +88,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
                     UserId = user.UserId,
                     UserName = user.UserName,
                     ChannelId = "General"
-                });
+                }, delay: 1 /* TODO: only here b/c of the $connect race condition */);
             }
 
             // create connection record
@@ -102,7 +102,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
             await NotifyAsync(userId: userId, channelId: null, new WelcomeNotification {
                 UserId = user.UserId,
                 UserName = user.UserName
-            });
+            }, delay: 1 /* TODO: only here b/c of the $connect race condition */);
 
             // fetch all channels the user is subscribed to
             var subscriptions = await _dataTable.GetUserSubscriptionsAsync(user.UserId);
@@ -124,7 +124,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
                         ChannelId = message.ChannelId,
                         Text = message.Message,
                         Timestamp = message.Timestamp
-                    });
+                    }, delay: 1 /* TODO: only here b/c of the $connect race condition */);
                 }
             }
         }
@@ -200,14 +200,16 @@ namespace Demo.WebSocketsChat.ChatFunction {
             });
         }
 
-        private Task NotifyAsync<T>(string userId, string channelId, T notification) where T : Notification
+        private Task NotifyAsync<T>(string userId, string channelId, T notification, int delay = 0) where T : Notification
             => _sqsClient.SendMessageAsync(new Amazon.SQS.Model.SendMessageRequest {
-                MessageBody = LambdaSerializer.Serialize(new BroadcastMessage {
-                    UserId = userId,
-                    ChannelId = channelId,
-                    Payload = LambdaSerializer.Serialize(notification)
-                }),
-                QueueUrl = _notifyQueueUrl
+                    MessageBody = LambdaSerializer.Serialize(new BroadcastMessage {
+                        UserId = userId,
+                        ChannelId = channelId,
+                        Payload = LambdaSerializer.Serialize(notification)
+                    }
+                ),
+                QueueUrl = _notifyQueueUrl,
+                DelaySeconds = delay
             });
 
         private async Task<UserRecord> GetUserFromConnectionId(string connectionId, [CallerMemberName] string caller = "") {
