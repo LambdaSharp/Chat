@@ -18,6 +18,7 @@ Module: Demo.WebSocketsChat
 Pragmas:
   - Overrides:
       Module::WebSocket.RouteSelectionExpression: $request.body.Action
+      Module::WebSocket::StageName: chat
 Using:
   - Module: LambdaSharp.S3.IO@lambdasharp
 Items:
