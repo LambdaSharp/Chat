@@ -32,7 +32,7 @@ using Demo.WebSocketsChat.Common.Requests;
 
 namespace Demo.WebSocketsChat.ChatFunction {
 
-    public class Function : ALambdaApiGatewayFunction {
+    public sealed class Function : ALambdaApiGatewayFunction {
 
         //--- Fields ---
         private DataTable _table;

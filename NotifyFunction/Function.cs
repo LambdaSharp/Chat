@@ -32,7 +32,7 @@ using Demo.WebSocketsChat.Common.DataStore;
 
 namespace Demo.WebSocketsChat.NotifyFunction {
 
-    public class Function : ALambdaQueueFunction<BroadcastMessage> {
+    public sealed class Function : ALambdaQueueFunction<BroadcastMessage> {
 
         //--- Fields ---
         private IAmazonApiGatewayManagementApi _amaClient;
