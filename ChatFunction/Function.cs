@@ -43,12 +43,12 @@ namespace Demo.WebSocketsChat.ChatFunction {
         public override async Task InitializeAsync(LambdaConfig config) {
 
             // read configuration settings
-            var connectionsTableName = config.ReadDynamoDBTableName("ConnectionsTable");
+            var dataTableName = config.ReadDynamoDBTableName("DataTable");
             _notifyQueueUrl = config.ReadSqsQueueUrl("NotifyQueue");
 
             // initialize AWS clients
             _sqsClient = new AmazonSQSClient();
-            _table = new DataTable(connectionsTableName, new AmazonDynamoDBClient());
+            _table = new DataTable(dataTableName, new AmazonDynamoDBClient());
         }
 
         public async Task OpenConnectionAsync(APIGatewayProxyRequest request, string userName = null) {

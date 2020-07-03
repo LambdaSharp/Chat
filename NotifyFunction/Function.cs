@@ -42,14 +42,14 @@ namespace Demo.WebSocketsChat.NotifyFunction {
         public override async Task InitializeAsync(LambdaConfig config) {
 
             // read configuration settings
-            var connectionsTableName = config.ReadDynamoDBTableName("ConnectionsTable");
+            var dataTableName = config.ReadDynamoDBTableName("DataTable");
             var webSocketUrl = config.ReadText("Module::WebSocket::Url");
 
             // initialize AWS clients
             _amaClient = new AmazonApiGatewayManagementApiClient(new AmazonApiGatewayManagementApiConfig {
                 ServiceURL = webSocketUrl
             });
-            _table = new DataTable(connectionsTableName, new AmazonDynamoDBClient());
+            _table = new DataTable(dataTableName, new AmazonDynamoDBClient());
         }
 
         public override async Task ProcessMessageAsync(BroadcastMessage message) {

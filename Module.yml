@@ -24,7 +24,7 @@ Using:
 Items:
 
   # Connection Table
-  - Resource: ConnectionsTable
+  - Resource: DataTable
     Scope: all
     Type: AWS::DynamoDB::Table
     Allow: ReadWrite
@@ -172,6 +172,11 @@ Items:
         Events:
           - s3:ObjectCreated:*
           - s3:ObjectRemoved:*
+
+  - Function: Finalizer
+    Description: Initialize DynamoDB table with default rows
+    Memory: 256
+    Timeout: 30
 
   # Export website url
   - Variable: WebsiteUrl
