@@ -130,7 +130,9 @@ Items:
       DestinationKey: ""
       Encoding: BROTLI
 
+  # Create CloudFront distribution mapped to S3 bucket and WebSocket APIGateway
   - Resource: WebsiteCloudFront
+    DependsOn: WebsiteBucketPolicy
     Description: CloudFront distribution for https:// web access to the S3 bucket
     Type: AWS::CloudFront::Distribution
     Scope: InvalidateCloudFrontFunction
@@ -154,9 +156,7 @@ Items:
               OriginProtocolPolicy: https-only
 
         DefaultCacheBehavior:
-          AllowedMethods:
-            - GET
-            - HEAD
+          AllowedMethods: [ "GET", "HEAD" ]
           Compress: true
           DefaultTTL: 2592000 # 30 days
           TargetOriginId: S3Origin
@@ -167,19 +167,14 @@ Items:
           ViewerProtocolPolicy: redirect-to-https
 
         CacheBehaviors:
-          - AllowedMethods: [ "GET", "HEAD" ]
+          - TargetOriginId: WebSocket
             PathPattern: !Ref Module::WebSocket::StageName
-            TargetOriginId: WebSocket
+            AllowedMethods: [ "GET", "HEAD" ]
             ForwardedValues:
               QueryString: true
               Headers:
-                - Access-Control-Request-Headers
-                - Access-Control-Request-Method
-                - Origin
                 - Authorization
             ViewerProtocolPolicy: https-only
-
-    DependsOn: WebsiteBucketPolicy
 
   - Resource: WebsiteCloudFrontPermissions
     Allow:
@@ -217,4 +212,4 @@ Items:
   - Variable: WebSocketUrl
     Description: WebSocket URL
     Scope: public
-    Value: !Ref Module::WebSocket::Url
+    Value: !Sub "https://${WebsiteCloudFront.DomainName}/chat"
