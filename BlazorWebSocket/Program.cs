@@ -13,7 +13,11 @@ namespace BlazorWebSocket {
         public static async Task Main(string[] args) {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
             builder.RootComponents.Add<App>("app");
-            builder.Services.AddTransient(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+
+            // add HttpClient singleton configured with base address
+            builder.Services.AddSingleton(_ => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+
+            // enable access to browser local storage
             builder.Services.AddBlazoredLocalStorage();
             await builder.Build().RunAsync();
         }
