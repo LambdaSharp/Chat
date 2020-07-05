@@ -101,6 +101,19 @@ This JSON message changes the user name to _Bob_ for the current user:
 }
 ```
 
+## Login Flow
+
+1. Show splash screen in `index.html`
+1. Continue showing the same splash screen when `Index.razor` loads
+1. Check if we have a JWT token stored.
+  1. If we do, attempt to log in with it. (optional: check if it has expired)
+  1. If login is successful, then prepare to show the full interface
+1. If we don't have JWT token or we failed to login with the one we had (probably b/c it's expired), show a `Login` button
+1. Button redirects to Cognito login form
+1. Cognito redirects back to Blazor app with `id_token=JWT` in URI fragment
+1. Store JWT in local storage
+1. Log into WebSocket
+
 ## DynamoDB Table
 
 ### User Record
