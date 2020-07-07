@@ -16,16 +16,29 @@
  * limitations under the License.
  */
 
-using Amazon.Lambda.APIGatewayEvents;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
-namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
+namespace BlazorWebSocket {
 
-    public class AuthorizationRequest : APIGatewayProxyRequest {
+    public class AuthenticationTokens {
 
         //--- Properties ---
+        [JsonPropertyName("id_token")]
+        public string IdToken { get; set; }
 
-        [JsonProperty("methodArn")]
-        public string MethodArn { get; set; }
+        [JsonPropertyName("access_token")]
+        public string AccessToken { get; set; }
+
+        [JsonPropertyName("refresh_token")]
+        public string RefreshToken { get; set; }
+
+        [JsonPropertyName("expires_in")]
+        public int ExpiresIn { get; set; }
+
+        [JsonPropertyName("token_type")]
+        public string TokenType { get; set; }
+
+        [JsonPropertyName("error")]
+        public string Error { get; set; }
     }
 }

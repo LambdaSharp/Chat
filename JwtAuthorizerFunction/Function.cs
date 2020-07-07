@@ -63,7 +63,7 @@ namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
 
                 // validate JWT value
                 try {
-                    claims = new JwtSecurityTokenHandler().ValidateToken(authorization, new TokenValidationParameters {
+                    new JwtSecurityTokenHandler().ValidateToken(authorization, new TokenValidationParameters {
                         IssuerSigningKeys = _issuerJsonWebKeySet.Keys,
                         ValidIssuer = _issuer,
                         ValidAudience = _audience
@@ -94,6 +94,19 @@ namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
                     Fail("Unauthorized: replay detected");
                 } catch(SecurityTokenValidationException) {
                     Fail("Unauthorized: validation failed");
+                }
+            }
+
+            // parse JWT without validation
+            if(!string.IsNullOrEmpty(authorization)) {
+                LogInfo($"Parsing JWT: \"{authorization}\"");
+                try {
+                    claims = new JwtSecurityTokenHandler()
+                        .ReadJwtToken(authorization)
+                        .Claims
+                        .ToDictionary(claim => claim.Type, claim => claim.Value);
+                } catch(Exception e) {
+                    LogErrorAsInfo(e, "error pasing JWT");
                 }
             }
 
@@ -143,19 +156,6 @@ namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
                 LogInfo(reason);
                 if(_enabled) {
                     throw new Exception("Unauthorized");
-                }
-
-                // proceed despite failure; attempt to parse JWT without validation
-                if(!string.IsNullOrEmpty(authorization)) {
-                    LogInfo($"Parsing JWT: \"{authorization}\"");
-                    try {
-                        claims = new JwtSecurityTokenHandler()
-                            .ReadJwtToken(authorization)
-                            .Claims
-                            .ToDictionary(claim => claim.Type, claim => claim.Value);
-                    } catch(Exception e) {
-                        LogErrorAsInfo(e, "error pasing JWT");
-                    }
                 }
             }
         }

@@ -16,16 +16,20 @@
  * limitations under the License.
  */
 
-using Amazon.Lambda.APIGatewayEvents;
-using Newtonsoft.Json;
+namespace BlazorWebSocket {
 
-namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
-
-    public class AuthorizationRequest : APIGatewayProxyRequest {
+    public class CognitoSettings {
 
         //--- Properties ---
+        public string ClientId { get; set; }
+        public string RedirectUri { get; set; }
+        public string UserPoolUri { get; set; }
 
-        [JsonProperty("methodArn")]
-        public string MethodArn { get; set; }
+        //--- Methods --
+        public string GetLoginUrl(string state) => $"{UserPoolUri}/authorize"
+            + "?response_type=code"
+            + $"&client_id={ClientId}"
+            + $"&redirect_uri={RedirectUri}"
+            + $"&state={state}";
     }
 }

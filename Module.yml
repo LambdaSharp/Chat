@@ -143,6 +143,10 @@ Items:
         Comment: !Sub "CloudFront Distribution for WebChat app (${AWS::StackName})"
         Enabled: true
         HttpVersion: http2
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
         DefaultRootObject: index.html
         PriceClass: PriceClass_100
         Origins:
@@ -199,6 +203,17 @@ Items:
         Events:
           - s3:ObjectCreated:*
           - s3:ObjectRemoved:*
+
+  # Cognito User Pool Information (TODO: don't use hardcoded values!)
+  - Resource: CognitoJson
+    Type: LambdaSharp::S3::WriteJson
+    Properties:
+      Bucket: !Ref WebsiteBucket
+      Key: cognito.json
+      Contents:
+        ClientId: atcih2vp8ml9njd3ba9tu8n13
+        RedirectUri: https://d12ff9j6c54h0u.cloudfront.net/login
+        UserPoolUri: https://webchat.auth.us-west-2.amazoncognito.com
 
   # WebSocket Authorization
   - Resource: JwtAuthorizer
