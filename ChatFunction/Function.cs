@@ -61,7 +61,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
 
             // check if a user already exists or create a new one
             UserRecord user = null;
-            if(user != null) {
+            if(userId != null) {
                 user = await _dataTable.GetUserAsync(userId);
 
                 // could not find user, reset user id
