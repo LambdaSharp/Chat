@@ -55,7 +55,7 @@ namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
 
             // read Authorization token
             var authorization = GetAuthorizationToken();
-            var claims = new Dictionary<string, string>();
+            Dictionary<string, string> claims = null;
             if(string.IsNullOrEmpty(authorization)) {
                 Fail("Unauthorized: missing Authorization token");
             } else {
@@ -95,11 +95,8 @@ namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
                 } catch(SecurityTokenValidationException) {
                     Fail("Unauthorized: validation failed");
                 }
-            }
 
-            // parse JWT without validation
-            if(!string.IsNullOrEmpty(authorization)) {
-                LogInfo($"Parsing JWT: \"{authorization}\"");
+                // parse JWT without validation
                 try {
                     claims = new JwtSecurityTokenHandler()
                         .ReadJwtToken(authorization)
@@ -111,7 +108,8 @@ namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
             }
 
             // authorize user to continue
-            claims.TryGetValue("sub", out var principal);
+            string principal = null;
+            claims?.TryGetValue("sub", out principal);
             return new AuthorizationResponse {
                 PrincipalId = principal ?? "user",
                 PolicyDocument = new PolicyDocument {

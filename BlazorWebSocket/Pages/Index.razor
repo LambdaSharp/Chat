@@ -1,15 +1,15 @@
+@inherits IndexBase
 @page "/"
 
-@using System.Net.WebSockets
-@using Demo.WebSocketsChat.Common.Notifications;
-@using Demo.WebSocketsChat.Common.Requests;
-
-@implements IDisposable
-
-@inject HttpClient Http
-@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
-
-@if(_websocketDispatch.State == WebSocketState.Open) {
+@if(State == ConnectionState.Initializing) {
+    @* TODO: show splash *@
+    <h3>Loading...</h3>
+} else if(State == ConnectionState.Unauthorized) {
+    @* TODO: show nicer UI to redirect to login form *@
+    <a href=@LoginUrl>Login</a>
+} else if(State == ConnectionState.Connecting) {
+    <h3>Connecting...</h3>
+} else if(State == ConnectionState.Connected) {
     <form @onsubmit="RenameUserAsync">
         <label for="userName" class="col-sm-3 col-form-label">User Name</label>
         <div class="input-group mb-3">
@@ -37,7 +37,7 @@
     <br />
     <div>
         <ul class="list-group">
-            @foreach(var message in _messages.OrderByDescending(message => message.Timestamp).Select((x, i) => new { Value = x, Index = i })) {
+            @foreach(var message in Messages.OrderByDescending(message => message.Timestamp).Select((x, i) => new { Value = x, Index = i })) {
                 <li class=@string.Format("list-group-item {0}", (message.Index % 2 == 0) ? "list-group-item-secondary" : "list-group-item-light")>
                     @if(message.Value.UserId == "#host") {
                         <p><span style="color:blue">Host </span> <small class="text-muted">@DateTimeOffset.FromUnixTimeMilliseconds(message.Value.Timestamp).ToString("HH:mm")</small> <br />@message.Value.Text</p>
@@ -49,130 +49,5 @@
         </ul>
     </div>
 } else {
-    <h3>Connecting...</h3>
-}
-
-@code {
-
-    //--- Types ---
-    private class Config {
-
-        //--- Properties ---
-        public string ServerUri { get; set; }
-    }
-
-    //--- Fields ---
-    private readonly List<UserMessageChangedNotification> _messages = new List<UserMessageChangedNotification>();
-    private readonly WebSocketDispatch _websocketDispatch = new WebSocketDispatch();
-
-    //--- Properties ---
-    private string ChatMessage { get; set; }
-    private string UserId { get; set; }
-    private string UserName { get; set; }
-
-    private Uri ServerUri => string.IsNullOrEmpty(UserId)
-        ? new Uri($"wss://{Http.BaseAddress.Host}/socket")
-        : new Uri($"wss://{Http.BaseAddress.Host}/socket?userId={Uri.EscapeUriString(UserId)}");
-
-    //--- Methods ---
-    protected override async Task OnInitializedAsync() {
-
-        // attempt to restore user name from browser local storage
-        var userId = await LocalStorage.GetItemAsync<string>("UserId");
-        if(!string.IsNullOrEmpty(userId)) {
-            Console.WriteLine($"Restored UserId from LocalStorage: {userId}");
-            UserId = userId;
-        } else {
-            Console.WriteLine($"No previous UserId found");
-        }
-
-        // configure WebSocket
-        _websocketDispatch.RegisterAction<UserMessageChangedNotification>("message", ReceivedMessage);
-        _websocketDispatch.RegisterAction<UserNameChangedNotification>("username", ReceivedUserNameChanged);
-        _websocketDispatch.RegisterAction<WelcomeNotification>("welcome", ReceivedWelcomeAsync);
-        _websocketDispatch.RegisterAction<JoinedChannelNotification>("joined", ReceivedJoinedChannel);
-
-        // attempt to connect to server
-        _websocketDispatch.ServerUri = ServerUri;
-        await _websocketDispatch.Connect();
-    }
-
-    private void ReceivedMessage(UserMessageChangedNotification message) {
-        Console.WriteLine($"Received UserMessage: UserId={message.UserId}, UserName={message.UserName}, ChannelId={message.ChannelId}, Text='{message.Text}', Timestamp={message.Timestamp}");
-
-        // add message to message list
-        _messages.Add(message);
-
-        // update user interface
-        StateHasChanged();
-    }
-
-    private void ReceivedUserNameChanged(UserNameChangedNotification username) {
-        Console.WriteLine($"Received UserNameChanged: UserId={username.UserId}, UserName={username.UserName}, OldUserName={username.OldUserName}");
-
-        // check if user name change notification is about us or somebody else
-        if(username.UserId == UserId) {
-
-            // update our user name
-            UserName = username.UserName;
-        }
-
-        // show message about renamed user
-        _messages.Add(new UserMessageChangedNotification {
-            UserId = "#host",
-            Text = $"{username.OldUserName} is now known as {username.UserName}",
-            Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        });
-
-        // update user interface
-        StateHasChanged();
-    }
-
-    private async Task ReceivedWelcomeAsync(WelcomeNotification welcome) {
-        Console.WriteLine($"Received Welcome: UserId={welcome.UserId}, UserName={welcome.UserName}");
-
-        // update application state
-        UserId = welcome.UserId;
-        UserName = welcome.UserName;
-
-        // store user id for the future
-        await LocalStorage.SetItemAsync("UserId", UserId);
-
-        // update connection URL with user id
-        _websocketDispatch.ServerUri = ServerUri;
-
-        // update user interface
-        StateHasChanged();
-    }
-
-    private void ReceivedJoinedChannel(JoinedChannelNotification joined) {
-        Console.WriteLine($"Received JoinedChannel: UserId={joined.UserId}, UserName={joined.UserName}, ChannelId={joined.ChannelId}");
-
-        // show message about renamed user
-        _messages.Add(new UserMessageChangedNotification {
-            UserId = "#host",
-            Text = $"{joined.UserName} has joined",
-            Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-        });
-
-        // update user interface
-        StateHasChanged();
-    }
-
-    private async Task SendMessageAsync() {
-        await _websocketDispatch.SendMessageAsync(new SendMessageRequest {
-            ChannelId = "General",
-            Text = ChatMessage
-        });
-        ChatMessage = "";
-    }
-
-    private async Task RenameUserAsync() {
-        await _websocketDispatch.SendMessageAsync(new RenameUserRequest {
-            UserName = UserName
-        });
-    }
-
-    //--- IDisposable Members ---
-    void IDisposable.Dispose() => _websocketDispatch.Dispose();
+    <h3>Unexpected state... (@State)</h3>
 }

@@ -20,9 +20,9 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Web;
+using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components;
 
 namespace BlazorWebSocket.Pages {
@@ -30,13 +30,17 @@ namespace BlazorWebSocket.Pages {
     public class LoginBase : ComponentBase {
 
         //--- Properties ---
+        protected string LoginUrl { get; set; }
         [Inject] private HttpClient HttpClient { get; set; }
         [Inject] private NavigationManager NavigationManager { get; set; }
         [Inject] private CognitoSettings CognitoSettings { get; set; }
-        public string LoginUrl { get; set; }
+        [Inject] private ILocalStorageService LocalStorage { get; set; }
 
         //--- Methods ---
         protected override async Task OnInitializedAsync() {
+
+            // remove any previous authentication tokens
+            await LocalStorage.RemoveItemAsync("Tokens");
 
             // check if page is loaded with a authorization grant code (i.e. ?code=XYZ)
             var queryParameters = HttpUtility.ParseQueryString(new Uri(NavigationManager.Uri).Query);
@@ -54,11 +58,15 @@ namespace BlazorWebSocket.Pages {
                     new KeyValuePair<string, string>("client_id", CognitoSettings.ClientId),
                     new KeyValuePair<string, string>("redirect_uri", CognitoSettings.RedirectUri)
                 }));
+                if(oauth2TokenResponse.IsSuccessStatusCode) {
 
-                var json = await oauth2TokenResponse.Content.ReadAsStringAsync();
-                Console.WriteLine($"Received: {json}");
-                var authenticationTokens = JsonSerializer.Deserialize<AuthenticationTokens>(json);
-                Console.WriteLine($"Parse: {JsonSerializer.Serialize(authenticationTokens)}");
+                    // store authentication tokens in local storage
+                    var json = await oauth2TokenResponse.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Storing authentication tokens: {json}");
+                    await LocalStorage.SetItemAsync("Tokens", JsonSerializer.Deserialize<AuthenticationTokens>(json));
+                }
+
+                // navigate back to main page to connect to the websocket
                 NavigationManager.NavigateTo("/");
             } else {
                 Console.WriteLine("No code grant to fetch!");

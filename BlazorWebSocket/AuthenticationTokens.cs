@@ -40,5 +40,8 @@ namespace BlazorWebSocket {
 
         [JsonPropertyName("error")]
         public string Error { get; set; }
+
+        [JsonPropertyName("expiration")]
+        public long Expiration { get; set; }
     }
 }
