@@ -63,7 +63,9 @@ namespace BlazorWebSocket.Pages {
                     // store authentication tokens in local storage
                     var json = await oauth2TokenResponse.Content.ReadAsStringAsync();
                     Console.WriteLine($"Storing authentication tokens: {json}");
-                    await LocalStorage.SetItemAsync("Tokens", JsonSerializer.Deserialize<AuthenticationTokens>(json));
+                    var authorizationTokens = JsonSerializer.Deserialize<AuthenticationTokens>(json);
+                    authorizationTokens.Expiration = DateTimeOffset.UtcNow.AddSeconds(authorizationTokens.ExpiresIn).ToUnixTimeSeconds();
+                    await LocalStorage.SetItemAsync("Tokens", authorizationTokens);
                 }
 
                 // navigate back to main page to connect to the websocket

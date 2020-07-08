@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 
 namespace BlazorWebSocket {
 
-    public class WebSocketDispatch : IDisposable {
+    public class WebSocketDispatcher : IDisposable {
 
         //--- Class Methods ---
         private static bool TryParseJsonDocument(byte[] bytes, out JsonDocument document) {
@@ -43,18 +43,23 @@ namespace BlazorWebSocket {
         private readonly Dictionary<string, Func<string, Task>> _actions = new Dictionary<string, Func<string, Task>>();
 
         //--- Constructors ---
-        public WebSocketDispatch(Uri serverUri) => _serverUri = serverUri ?? throw new ArgumentNullException(nameof(serverUri));
+        public WebSocketDispatcher(Uri serverUri) => _serverUri = serverUri ?? throw new ArgumentNullException(nameof(serverUri));
 
         //--- Properties ---
         public string IdToken { get; set; }
         public WebSocketState State => _webSocket.State;
 
         //--- Methods ---
-        public async Task Connect() {
+        public async Task<bool> Connect() {
 
             // attempt to connect to server
-            await ReconnectWebSocketAsync();
+            try {
+                await ReconnectWebSocketAsync();
+            } catch(WebSocketException e) {
+                return false;
+            }
             _ = ReceiveLoop();
+            return true;
         }
 
         public void RegisterAction<T>(string action, Action<T> callback)

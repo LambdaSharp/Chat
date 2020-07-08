@@ -153,6 +153,22 @@ namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
             void Fail(string reason) {
                 LogInfo(reason);
                 if(_enabled) {
+
+                    // TODO: we should respond with Deny policy to avoid logging an exception in the logs!
+                    // return new AuthorizationResponse {
+                    //     PrincipalId = "user",
+                    //     PolicyDocument = new PolicyDocument {
+                    //         Statement = {
+                    //             new Statement {
+                    //                 Sid = "JwtAuthorization",
+                    //                 Action = "execute-api:Invoke",
+                    //                 Effect = "Deny",
+                    //                 Resource = request.MethodArn
+                    //             }
+                    //         }
+                    //     },
+                    //     Context = claims
+                    // };
                     throw new Exception("Unauthorized");
                 }
             }

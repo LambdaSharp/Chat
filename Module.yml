@@ -183,8 +183,7 @@ Items:
             ViewerProtocolPolicy: https-only
 
   - Resource: WebsiteCloudFrontPermissions
-    Allow:
-        - cloudfront:CreateInvalidation
+    Allow: cloudfront:CreateInvalidation
     Value: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebsiteCloudFront}"
 
   - Resource: WebsiteCloudFrontIdentity

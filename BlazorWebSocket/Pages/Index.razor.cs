@@ -49,7 +49,7 @@ namespace BlazorWebSocket.Pages {
         protected string UserId { get; set; }
         protected string UserName { get; set; }
         protected ConnectionState State { get; set; } = ConnectionState.Initializing;
-        protected WebSocketDispatch WebSocketDispatch { get; set; }
+        protected WebSocketDispatcher WebSocketDispatcher { get; set; }
         protected string LoginUrl;
         [Inject] private HttpClient HttpClient { get; set; }
         [Inject] private ILocalStorageService LocalStorage { get; set; }
@@ -58,17 +58,16 @@ namespace BlazorWebSocket.Pages {
         //--- Methods ---
         protected override async Task OnInitializedAsync() {
 
-            // configure WebSocket
-            WebSocketDispatch = new WebSocketDispatch(new Uri($"wss://{HttpClient.BaseAddress.Host}/socket"));
-            WebSocketDispatch.RegisterAction<UserMessageChangedNotification>("message", ReceivedMessage);
-            WebSocketDispatch.RegisterAction<UserNameChangedNotification>("username", ReceivedUserNameChanged);
-            WebSocketDispatch.RegisterAction<WelcomeNotification>("welcome", ReceivedWelcomeAsync);
-            WebSocketDispatch.RegisterAction<JoinedChannelNotification>("joined", ReceivedJoinedChannel);
+            // configure WebSocket dispatcher
+            WebSocketDispatcher = new WebSocketDispatcher(new Uri($"wss://{HttpClient.BaseAddress.Host}/socket"));
+            WebSocketDispatcher.RegisterAction<UserMessageChangedNotification>("message", ReceivedMessage);
+            WebSocketDispatcher.RegisterAction<UserNameChangedNotification>("username", ReceivedUserNameChanged);
+            WebSocketDispatcher.RegisterAction<WelcomeNotification>("welcome", ReceivedWelcomeAsync);
+            WebSocketDispatcher.RegisterAction<JoinedChannelNotification>("joined", ReceivedJoinedChannel);
 
             // attempt to restore authentication tokens from local storage
             var authenticationTokens = await GetAuthenticationTokens();
             if(authenticationTokens == null) {
-                Console.WriteLine("No authentication tokens found");
 
                 // TODO: create 'state' to protect against replay attacks
                 LoginUrl = CognitoSettings.GetLoginUrl(state: "TBD");
@@ -79,15 +78,25 @@ namespace BlazorWebSocket.Pages {
                 State = ConnectionState.Connecting;
 
                 // attempt to connect to the websocket
-                WebSocketDispatch.IdToken = authenticationTokens.IdToken;
-                await WebSocketDispatch.Connect();
+                WebSocketDispatcher.IdToken = authenticationTokens.IdToken;
+                if(await WebSocketDispatcher.Connect()) {
+                    Console.WriteLine("Websocket connection succeeded");
+                } else {
+                    Console.WriteLine("Websocket connection failed");
+                    await ClearAuthenticationTokens();
+
+                    // TODO: create 'state' to protect against replay attacks
+                    LoginUrl = CognitoSettings.GetLoginUrl(state: "TBD");
+                    Console.WriteLine($"Login URL: {LoginUrl}");
+                    State = ConnectionState.Unauthorized;
+                }
 
                 // TODO: set timer to refresh tokens and reconnect websocket
             }
         }
 
         protected async Task SendMessageAsync() {
-            await WebSocketDispatch.SendMessageAsync(new SendMessageRequest {
+            await WebSocketDispatcher.SendMessageAsync(new SendMessageRequest {
                 ChannelId = "General",
                 Text = ChatMessage
             });
@@ -95,7 +104,7 @@ namespace BlazorWebSocket.Pages {
         }
 
         protected async Task RenameUserAsync() {
-            await WebSocketDispatch.SendMessageAsync(new RenameUserRequest {
+            await WebSocketDispatcher.SendMessageAsync(new RenameUserRequest {
                 UserName = UserName
             });
         }
@@ -162,23 +171,26 @@ namespace BlazorWebSocket.Pages {
             // check if any authentication tokens are stored
             var authenticationTokens = await LocalStorage.GetItemAsync<AuthenticationTokens>("Tokens");
             if(authenticationTokens == null) {
+                Console.WriteLine($"No authentication tokens found");
                 return null;
             }
 
             // check if tokens will expire in 5 minutes or less
-            if(DateTimeOffset.FromUnixTimeSeconds(authenticationTokens.Expiration) >= DateTimeOffset.UtcNow.AddSeconds(-TOKEN_EXPIRATION_LIMIT_SECONDS)) {
+            var authenticationTokenExpiration = DateTimeOffset.FromUnixTimeSeconds(authenticationTokens.Expiration);
+            var authenticationTokenTtl = authenticationTokenExpiration - DateTimeOffset.UtcNow;
+            if(authenticationTokenTtl < TimeSpan.FromSeconds(TOKEN_EXPIRATION_LIMIT_SECONDS)) {
+                Console.WriteLine($"Current authentication tokens has expired or expires soon: {authenticationTokenExpiration}");
 
                 // refresh authentication tokens
-                Console.WriteLine($"Refreshgin authentication tokens for code grant: {authenticationTokens.IdToken}");
+                Console.WriteLine($"Refreshing authentication tokens for code grant: {authenticationTokens.IdToken}");
                 var oauth2TokenResponse = await HttpClient.PostAsync($"{CognitoSettings.UserPoolUri}/oauth2/token", new FormUrlEncodedContent(new[] {
                     new KeyValuePair<string, string>("grant_type", "refresh_token"),
                     new KeyValuePair<string, string>("refresh_token ", authenticationTokens.RefreshToken),
                     new KeyValuePair<string, string>("client_id", CognitoSettings.ClientId)
                 }));
                 if(!oauth2TokenResponse.IsSuccessStatusCode) {
-
-                    // remove previous authentication tokens
-                    await LocalStorage.RemoveItemAsync("Tokens");
+                    Console.WriteLine("Authentication tokens refresh failed");
+                    await ClearAuthenticationTokens();
                     return null;
                 }
 
@@ -187,11 +199,18 @@ namespace BlazorWebSocket.Pages {
                 Console.WriteLine($"Storing authentication tokens: {json}");
                 authenticationTokens = JsonSerializer.Deserialize<AuthenticationTokens>(json);
                 await LocalStorage.SetItemAsync("Tokens", authenticationTokens);
+            } else {
+                Console.WriteLine($"Current authentication tokens valid until: {authenticationTokenExpiration}");
             }
             return authenticationTokens;
         }
 
+        private async Task ClearAuthenticationTokens() {
+            Console.WriteLine("Clearing old authentication tokens");
+            await LocalStorage.RemoveItemAsync("Tokens");
+        }
+
         //--- IDisposable Members ---
-        void IDisposable.Dispose() => WebSocketDispatch.Dispose();
+        void IDisposable.Dispose() => WebSocketDispatcher.Dispose();
     }
 }
