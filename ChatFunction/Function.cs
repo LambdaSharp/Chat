@@ -52,12 +52,16 @@ namespace Demo.WebSocketsChat.ChatFunction {
             _dataTable = new DataTable(dataTableName, new AmazonDynamoDBClient());
         }
 
-        public async Task OpenConnectionAsync(APIGatewayProxyRequest request, string userId = null) {
+        public async Task OpenConnectionAsync(APIGatewayProxyRequest request) {
             LogInfo($"Connected: {request.RequestContext.ConnectionId}");
+
+            // get the user id from the authorizer metadata
+            request.RequestContext.Authorizer.TryGetValue("sub", out var subject);
+            var userId = subject as string;
 
             // check if a user already exists or create a new one
             UserRecord user = null;
-            if(userId != null) {
+            if(user != null) {
                 user = await _dataTable.GetUserAsync(userId);
 
                 // could not find user, reset user id
