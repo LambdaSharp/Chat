@@ -21,6 +21,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Blazored.LocalStorage;
+using BlazorWebSocket.Common;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -37,7 +38,7 @@ namespace BlazorWebSocket {
             var http = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
             builder.Services.AddSingleton(_ => http);
 
-            // add Cognito User Pool settings
+            // add Cognito User Pool settings by reading config file from S3 bucket
             var cognito = await http.GetFromJsonAsync<CognitoSettings>("cognito.json");
             builder.Services.AddSingleton(_ => cognito);
 

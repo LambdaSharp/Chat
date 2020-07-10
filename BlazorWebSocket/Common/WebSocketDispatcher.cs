@@ -25,7 +25,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BlazorWebSocket {
+namespace BlazorWebSocket.Common {
 
     public class WebSocketDispatcher : IDisposable {
 

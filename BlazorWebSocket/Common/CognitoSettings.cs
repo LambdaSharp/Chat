@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-namespace BlazorWebSocket {
+namespace BlazorWebSocket.Common {
 
     public class CognitoSettings {
 

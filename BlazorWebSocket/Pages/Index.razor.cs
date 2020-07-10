@@ -19,9 +19,9 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Blazored.LocalStorage;
+using BlazorWebSocket.Common;
 using Demo.WebSocketsChat.Common.Notifications;
 using Demo.WebSocketsChat.Common.Requests;
 using Microsoft.AspNetCore.Components;

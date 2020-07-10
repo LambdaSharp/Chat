@@ -20,7 +20,7 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace BlazorWebSocket {
+namespace BlazorWebSocket.Common {
 
     public sealed class AuthenticationTokens {
 
