@@ -17,45 +17,43 @@
 } else if(State == ConnectionState.Connected) {
 
     @* render chat user interface *@
-    <div class="content px-4">
-        <form @onsubmit="RenameUserAsync">
-            <label for="userName" class="col-sm-3 col-form-label">User Name</label>
-            <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                    <span class="input-group-text" id="basic-addon1">🤓</span>
-                </div>
-                <input type="text" class="form-control" aria-label="Username" aria-describedby="basic-addon1" id="userName" @bind="@UserName" />
-                <div class="input-group-append">
-                    <button type="submit" class="btn btn-secondary">Submit</button>
-                </div>
+    <form @onsubmit="RenameUserAsync">
+        <label for="userName" class="col-sm-3 col-form-label">User Name</label>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="basic-addon1">🤓</span>
             </div>
-        </form>
-        <form @onsubmit="SendMessageAsync">
-            <label for="sendMessage" class="col-sm-3 col-form-label"></label>
-            <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                    <span class="input-group-text" id="basic-addon1">💬</span>
-                </div>
-                <input type="text" placeholder="Say something..." class="form-control" aria-label="SendMessage" aria-describedby="basic-addon1" id="sendMessage" @bind="@ChatMessage" />
-                <div class="input-group-append">
-                    <button type="submit" class="btn btn-primary">Send</button>
-                </div>
+            <input type="text" class="form-control" aria-label="Username" aria-describedby="basic-addon1" id="userName" @bind="@UserName" />
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-secondary">Submit</button>
             </div>
-        </form>
-        <br />
-        <div>
-            <ul class="list-group">
-                @foreach(var message in Messages.OrderByDescending(message => message.Timestamp).Select((x, i) => new { Value = x, Index = i })) {
-                    <li class=@string.Format("list-group-item {0}", (message.Index % 2 == 0) ? "list-group-item-secondary" : "list-group-item-light")>
-                        @if(message.Value.UserId == "#host") {
-                            <p><span style="color:blue">Host </span> <small class="text-muted">@DateTimeOffset.FromUnixTimeMilliseconds(message.Value.Timestamp).ToString("HH:mm")</small> <br />@message.Value.Text</p>
-                        } else {
-                            <p><span style="color:maroon">@message.Value.UserName</span> <small class="text-muted">@DateTimeOffset.FromUnixTimeMilliseconds(message.Value.Timestamp).ToString("HH:mm")</small> <br />@message.Value.Text</p>
-                        }
-                    </li>
-                }
-            </ul>
         </div>
+    </form>
+    <form @onsubmit="SendMessageAsync">
+        <label for="sendMessage" class="col-sm-3 col-form-label"></label>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="basic-addon1">💬</span>
+            </div>
+            <input type="text" placeholder="Say something..." class="form-control" aria-label="SendMessage" aria-describedby="basic-addon1" id="sendMessage" @bind="@ChatMessage" />
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-primary">Send</button>
+            </div>
+        </div>
+    </form>
+    <br />
+    <div>
+        <ul class="list-group">
+            @foreach(var message in Messages.OrderByDescending(message => message.Timestamp).Select((x, i) => new { Value = x, Index = i })) {
+                <li class=@string.Format("list-group-item {0}", (message.Index % 2 == 0) ? "list-group-item-secondary" : "list-group-item-light")>
+                    @if(message.Value.UserId == "#host") {
+                        <p><span style="color:blue">Host </span> <small class="text-muted">@DateTimeOffset.FromUnixTimeMilliseconds(message.Value.Timestamp).ToString("HH:mm")</small> <br />@message.Value.Text</p>
+                    } else {
+                        <p><span style="color:maroon">@message.Value.UserName</span> <small class="text-muted">@DateTimeOffset.FromUnixTimeMilliseconds(message.Value.Timestamp).ToString("HH:mm")</small> <br />@message.Value.Text</p>
+                    }
+                </li>
+            }
+        </ul>
     </div>
 } else {
     <h3>Unexpected state... (@State)</h3>
