@@ -23,6 +23,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using LambdaSharp;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 
 namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
 
@@ -57,73 +58,59 @@ namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
             var authorization = GetAuthorizationToken();
             Dictionary<string, string> claims = null;
             if(string.IsNullOrEmpty(authorization)) {
-                Fail("Unauthorized: missing Authorization token");
+                LogInfo("Unauthorized: missing Authorization token");
             } else {
-                LogInfo($"Validating JWT: \"{authorization}\"");
-
-                // validate JWT value
                 try {
-                    new JwtSecurityTokenHandler().ValidateToken(authorization, new TokenValidationParameters {
-                        IssuerSigningKeys = _issuerJsonWebKeySet.Keys,
-                        ValidIssuer = _issuer,
-                        ValidAudience = _audience
-                    }, out var _).Claims.ToDictionary(claim => $"jwt:{claim.Type}", claim => claim.Value);
-                } catch(SecurityTokenExpiredException) {
-                    Fail("Unauthorized: token expired");
-                } catch(SecurityTokenInvalidAlgorithmException) {
-                    Fail("Unauthorized: invalid algorithm");
-                } catch(SecurityTokenInvalidAudienceException) {
-                    Fail("Unauthorized: invalid audience");
-                } catch(SecurityTokenInvalidIssuerException) {
-                    Fail("Unauthorized: invalid issuer");
-                } catch(SecurityTokenInvalidLifetimeException) {
-                    Fail("Unauthorized: invalid lifetime");
-                } catch(SecurityTokenInvalidSignatureException) {
-                    Fail("Unauthorized: invalid signature");
-                } catch(SecurityTokenInvalidSigningKeyException) {
-                    Fail("Unauthorized: invalid signing keys");
-                } catch(SecurityTokenInvalidTypeException) {
-                    Fail("Unauthorized: invalid type");
-                } catch(SecurityTokenNoExpirationException) {
-                    Fail("Unauthorized: no expiration");
-                } catch(SecurityTokenNotYetValidException) {
-                    Fail("Unauthorized: not yet valid");
-                } catch(SecurityTokenReplayAddFailedException) {
-                    Fail("Unauthorized: replay add failed");
-                } catch(SecurityTokenReplayDetectedException) {
-                    Fail("Unauthorized: replay detected");
-                } catch(SecurityTokenValidationException) {
-                    Fail("Unauthorized: validation failed");
-                }
 
-                // parse JWT without validation
-                try {
+                    // parse JWT without validation
+                    LogInfo($"Parsing JWT: \"{authorization}\"");
                     claims = new JwtSecurityTokenHandler()
                         .ReadJwtToken(authorization)
                         .Claims
                         .ToDictionary(claim => claim.Type, claim => claim.Value);
+                    LogInfo($"JWT Claims: {JsonConvert.SerializeObject(claims)}");
+
+                    // validate JWT value
+                    LogInfo($"Validating JWT");
+                    try {
+                        new JwtSecurityTokenHandler().ValidateToken(authorization, new TokenValidationParameters {
+                            IssuerSigningKeys = _issuerJsonWebKeySet.Keys,
+                            ValidIssuer = _issuer,
+                            ValidAudience = _audience
+                        }, out var _).Claims.ToDictionary(claim => $"jwt:{claim.Type}", claim => claim.Value);
+                        return CreateResponse(success: true);
+                    } catch(SecurityTokenExpiredException) {
+                        LogInfo("Unauthorized: token expired");
+                    } catch(SecurityTokenInvalidAlgorithmException) {
+                        LogInfo("Unauthorized: invalid algorithm");
+                    } catch(SecurityTokenInvalidAudienceException) {
+                        LogInfo("Unauthorized: invalid audience");
+                    } catch(SecurityTokenInvalidIssuerException) {
+                        LogInfo("Unauthorized: invalid issuer");
+                    } catch(SecurityTokenInvalidLifetimeException) {
+                        LogInfo("Unauthorized: invalid lifetime");
+                    } catch(SecurityTokenInvalidSignatureException) {
+                        LogInfo("Unauthorized: invalid signature");
+                    } catch(SecurityTokenInvalidSigningKeyException) {
+                        LogInfo("Unauthorized: invalid signing keys");
+                    } catch(SecurityTokenInvalidTypeException) {
+                        LogInfo("Unauthorized: invalid type");
+                    } catch(SecurityTokenNoExpirationException) {
+                        LogInfo("Unauthorized: no expiration");
+                    } catch(SecurityTokenNotYetValidException) {
+                        LogInfo("Unauthorized: not yet valid");
+                    } catch(SecurityTokenReplayAddFailedException) {
+                        LogInfo("Unauthorized: replay add failed");
+                    } catch(SecurityTokenReplayDetectedException) {
+                        LogInfo("Unauthorized: replay detected");
+                    } catch(SecurityTokenValidationException) {
+                        LogInfo("Unauthorized: validation failed");
+                    }
                 } catch(Exception e) {
-                    LogErrorAsInfo(e, "error pasing JWT");
+                    LogErrorAsInfo(e, "error parsing JWT");
                 }
             }
-
-            // authorize user to continue
-            string principal = null;
-            claims?.TryGetValue("sub", out principal);
-            return new AuthorizationResponse {
-                PrincipalId = principal ?? "user",
-                PolicyDocument = new PolicyDocument {
-                    Statement = {
-                        new Statement {
-                            Sid = "JwtAuthorization",
-                            Action = "execute-api:Invoke",
-                            Effect = "Allow",
-                            Resource = request.MethodArn
-                        }
-                    }
-                },
-                Context = claims
-            };
+            return CreateResponse(success: false);
 
             // local function
             string GetAuthorizationToken() {
@@ -150,27 +137,29 @@ namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
                 return null;
             }
 
-            void Fail(string reason) {
-                LogInfo(reason);
-                if(_enabled) {
+            AuthorizationResponse CreateResponse(bool success) {
 
-                    // TODO: we should respond with Deny policy to avoid logging an exception in the logs!
-                    // return new AuthorizationResponse {
-                    //     PrincipalId = "user",
-                    //     PolicyDocument = new PolicyDocument {
-                    //         Statement = {
-                    //             new Statement {
-                    //                 Sid = "JwtAuthorization",
-                    //                 Action = "execute-api:Invoke",
-                    //                 Effect = "Deny",
-                    //                 Resource = request.MethodArn
-                    //             }
-                    //         }
-                    //     },
-                    //     Context = claims
-                    // };
-                    throw new Exception("Unauthorized");
-                }
+                // use claims subject as principal if available
+                string principal = null;
+                claims?.TryGetValue("sub", out principal);
+
+                // create response with claims as context
+                return new AuthorizationResponse {
+                    PrincipalId = principal ?? "user",
+                    PolicyDocument = new PolicyDocument {
+                        Statement = {
+                            new Statement {
+                                Sid = "JwtAuthorization",
+                                Action = "execute-api:Invoke",
+                                Effect = (success || !_enabled)
+                                    ? "Allow"
+                                    : "Deny",
+                                Resource = request.MethodArn
+                            }
+                        }
+                    },
+                    Context = claims
+                };
             }
         }
     }
