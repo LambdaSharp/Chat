@@ -204,15 +204,11 @@ Items:
           - s3:ObjectRemoved:*
 
   # Cognito User Pool Information (TODO: don't use hardcoded values!)
-  - Resource: CognitoJson
-    Type: LambdaSharp::S3::WriteJson
-    Properties:
-      Bucket: !Ref WebsiteBucket
-      Key: cognito.json
-      Contents:
-        ClientId: atcih2vp8ml9njd3ba9tu8n13
-        RedirectUri: https://d12ff9j6c54h0u.cloudfront.net/login
-        UserPoolUri: https://webchat.auth.us-west-2.amazoncognito.com
+  - Variable: WebsiteLoginUrl
+    Value: !Sub "https://${WebsiteCloudFront.DomainName}/login"
+
+  - Group: Cognito
+    Items: !Include Cognito.yml
 
   # WebSocket Authorization
   - Resource: JwtAuthorizer
@@ -261,8 +257,8 @@ Items:
     Memory: 256
     Timeout: 30
     Environment:
-      Issuer: https://cognito-idp.us-west-2.amazonaws.com/us-west-2_zKXBKFrZh
-      Audience: i698qdd617988q3jtdll04f4q
+      Issuer: !Ref Cognito::Issuer
+      Audience: !Ref Cognito::ClientId
 
   # Initialize DataTable with minimal records
   - Function: Finalizer

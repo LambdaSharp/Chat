@@ -1,0 +1,71 @@
+- Resource: UserPool
+  Type: AWS::Cognito::UserPool
+  Properties:
+    AliasAttributes:
+      - email
+      - preferred_username
+    AutoVerifiedAttributes:
+      - email
+    # TODO: EmailConfiguration
+    # TODO: LambdaConfig
+    Schema:
+      - Name: email
+        AttributeDataType: String
+        Mutable: false
+        Required: true
+    UsernameConfiguration:
+      CaseSensitive: false
+    UserPoolTags:
+      "LambdaSharp:Module": !Ref Module::FullName
+      "LambdaSharp:Stack": !Ref AWS::StackName
+
+- Resource: UserPoolClient
+  Type: AWS::Cognito::UserPoolClient
+  Properties:
+    AllowedOAuthFlows:
+      - code
+    AllowedOAuthFlowsUserPoolClient: true
+    AllowedOAuthScopes:
+      # - email
+      - openid
+    CallbackURLs:
+      - !Ref WebsiteLoginUrl
+    # DefaultRedirectURI: !Ref WebsiteLoginUrl
+    ExplicitAuthFlows:
+      - ALLOW_USER_SRP_AUTH
+      - ALLOW_REFRESH_TOKEN_AUTH
+    GenerateSecret: false
+    LogoutURLs:
+      - !Sub "https://${WebsiteCloudFront.DomainName}/logout"
+    PreventUserExistenceErrors: ENABLED
+    RefreshTokenValidity: 7 # days
+    SupportedIdentityProviders:
+      - COGNITO
+    UserPoolId: !Ref Cognito::UserPool
+
+- Resource: UserPoolDomain
+  Type: AWS::Cognito::UserPoolDomain
+  Properties:
+    Domain: !Select [ 2, !Split [ "/", !Ref AWS::StackId ]]
+    UserPoolId: !Ref Cognito::UserPool
+
+- Variable: Issuer
+  Scope: public
+  # Value: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}"
+  Value: !GetAtt Cognito::UserPool.ProviderURL
+
+- Variable: ClientId
+  Value: !Ref Cognito::UserPoolClient
+
+- Variable: UserPoolUri
+  Value: !Sub "https://${Cognito::UserPoolDomain}.auth.us-west-2.amazoncognito.com"
+
+- Resource: ConfigDocument
+  Type: LambdaSharp::S3::WriteJson
+  Properties:
+    Bucket: !Ref WebsiteBucket
+    Key: cognito.json
+    Contents:
+      ClientId: !Ref Cognito::ClientId
+      RedirectUri: !Ref WebsiteLoginUrl
+      UserPoolUri: !Ref Cognito::UserPoolUri
