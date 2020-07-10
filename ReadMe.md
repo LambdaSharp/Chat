@@ -210,6 +210,7 @@ The message record is created for each message sent by a user on a channel. The 
 - [x] Allow users to create or join chat rooms.
 - [x] Add UI for logging in.
 - [x] Add Cognito user pool for user management.
+- [ ] Create user record at sign-in time with custom username (Cognito sign-up flow).
 - [ ] Secure WebSocket so they must come through CloudFront.
 - [ ] Allows users to create and join rooms.
 
