@@ -211,8 +211,11 @@ The message record is created for each message sent by a user on a channel. The 
 - [x] Add UI for logging in.
 - [x] Add Cognito user pool for user management.
 - [ ] Create user record at sign-in time with custom username (Cognito sign-up flow).
-- [ ] Secure WebSocket so they must come through CloudFront.
+- [ ] Automatically refresh tokens and reconnect websocket in the background.
 - [ ] Allows users to create and join rooms.
+- [ ] Improve chat protocol to not send message during `$connect` route since the socket is not open yet.
+- [ ] Secure WebSocket so they must come through CloudFront.
+- [ ] Improve fan-out mechanism for sending messages to open connections.
 
 ## Acknowledgements
 
