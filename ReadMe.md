@@ -209,7 +209,7 @@ The message record is created for each message sent by a user on a channel. The 
 - [x] Route WebSocket requests via CloudFront.
 - [x] Allow users to create or join chat rooms.
 - [x] Add UI for logging in.
-- [ ] Add Cognito user pool for user management.
+- [x] Add Cognito user pool for user management.
 - [ ] Secure WebSocket so they must come through CloudFront.
 - [ ] Allows users to create and join rooms.
 
