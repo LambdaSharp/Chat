@@ -16,11 +16,20 @@
  * limitations under the License.
  */
 
+using System;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace BlazorWebSocket {
 
-    public class AuthenticationTokens {
+    public sealed class AuthenticationTokens {
+
+        //--- Class Methods ---
+        public static AuthenticationTokens FromJson(string json) {
+            var result = JsonSerializer.Deserialize<AuthenticationTokens>(json);
+            result.Expiration = DateTimeOffset.UtcNow.AddSeconds(result.ExpiresIn).ToUnixTimeSeconds();
+            return result;
+        }
 
         //--- Properties ---
         [JsonPropertyName("id_token")]

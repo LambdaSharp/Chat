@@ -55,7 +55,7 @@ namespace BlazorWebSocket {
             // attempt to connect to server
             try {
                 await ReconnectWebSocketAsync();
-            } catch(WebSocketException e) {
+            } catch(WebSocketException) {
                 return false;
             }
             _ = ReceiveLoop();

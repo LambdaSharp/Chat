@@ -185,8 +185,8 @@ namespace BlazorWebSocket.Pages {
                 Console.WriteLine($"Refreshing authentication tokens for code grant: {authenticationTokens.IdToken}");
                 var oauth2TokenResponse = await HttpClient.PostAsync($"{CognitoSettings.UserPoolUri}/oauth2/token", new FormUrlEncodedContent(new[] {
                     new KeyValuePair<string, string>("grant_type", "refresh_token"),
-                    new KeyValuePair<string, string>("refresh_token ", authenticationTokens.RefreshToken),
-                    new KeyValuePair<string, string>("client_id", CognitoSettings.ClientId)
+                    new KeyValuePair<string, string>("client_id", CognitoSettings.ClientId),
+                    new KeyValuePair<string, string>("refresh_token", authenticationTokens.RefreshToken)
                 }));
                 if(!oauth2TokenResponse.IsSuccessStatusCode) {
                     Console.WriteLine("Authentication tokens refresh failed");
@@ -197,7 +197,7 @@ namespace BlazorWebSocket.Pages {
                 // store authentication tokens in local storage
                 var json = await oauth2TokenResponse.Content.ReadAsStringAsync();
                 Console.WriteLine($"Storing authentication tokens: {json}");
-                authenticationTokens = JsonSerializer.Deserialize<AuthenticationTokens>(json);
+                authenticationTokens = AuthenticationTokens.FromJson(json);
                 await LocalStorage.SetItemAsync("Tokens", authenticationTokens);
             } else {
                 Console.WriteLine($"Current authentication tokens valid until: {authenticationTokenExpiration}");
