@@ -79,7 +79,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
                 // create user record
                 user = new UserRecord {
                     UserId = userId,
-                    UserName = $"Anonymous-{userId}"
+                    UserName = $"User-{userId}"
                 };
                 await _dataTable.CreateUserAsync(user);
 

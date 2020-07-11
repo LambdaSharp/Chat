@@ -71,7 +71,7 @@ Items:
       - WebSocket: $connect
         Invoke: OpenConnection
         AuthorizationType: CUSTOM
-        AuthorizerId: !Ref JwtAuthorizer
+        AuthorizerId: !Ref Authorization::JwtAuthorizer
 
       - WebSocket: $disconnect
         Invoke: CloseConnection
@@ -203,62 +203,12 @@ Items:
           - s3:ObjectCreated:*
           - s3:ObjectRemoved:*
 
-  # Cognito User Pool Information (TODO: don't use hardcoded values!)
+  # Cognito User Pool Information (TODO: don't use hardcoded values! this information should come from the Blazor app)
   - Variable: WebsiteLoginUrl
     Value: !Sub "https://${WebsiteCloudFront.DomainName}/login"
 
-  - Group: Cognito
-    Items: !Include Cognito.yml
-
-  # WebSocket Authorization
-  - Resource: JwtAuthorizer
-    Type: AWS::ApiGatewayV2::Authorizer
-    Properties:
-      Name: JwtAuthorizer
-      ApiId: !Ref Module::WebSocket
-      AuthorizerType: REQUEST
-      AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${JwtAuthorizerFunction.Arn}/invocations"
-      AuthorizerCredentialsArn: !GetAtt JwtAuthorizerRole.Arn
-      IdentitySource:
-        #- route.request.header.Authorization
-        - route.request.querystring.id_token
-
-  - Resource: JwtAuthorizerRole
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - apigateway.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: lambda
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: lambda:invokeFunction
-                Resource: !GetAtt JwtAuthorizerFunction.Arn
-
-  - Resource: JwtAuthorizerPermission
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt JwtAuthorizerFunction.Arn
-      Principal: !Sub "apigateway.${AWS::URLSuffix}"
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${Module::WebSocket}/${Module::WebSocket::StageName}/$connect"
-
-  - Function: JwtAuthorizerFunction
-    Description: Authorize WebSocket connection using JWT
-    Memory: 256
-    Timeout: 30
-    Environment:
-      Issuer: !Ref Cognito::Issuer
-      Audience: !Ref Cognito::ClientId
+  - Group: Authorization
+    Items: !Include Authorization.yml
 
   # Initialize DataTable with minimal records
   - Function: Finalizer

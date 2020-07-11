@@ -218,6 +218,7 @@ The message record is created for each message sent by a user on a channel. The 
 - [ ] Improve chat protocol to not send message during `$connect` route since the socket is not open yet.
 - [ ] Secure WebSocket so they must come through CloudFront.
 - [ ] Improve fan-out mechanism for sending messages to open connections.
+- [ ] Create a "Website" group in module to encapsulate the S3 bucket, the CloudFront distribution, the cache invalidation Lambda function.
 
 ## Acknowledgements
 
