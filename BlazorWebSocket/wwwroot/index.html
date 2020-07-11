@@ -48,22 +48,38 @@
 
   <body class="d-flex flex-column h-100">
 
-    <!-- Begin page content -->
-      <main role="main" class="flex-shrink-0">
-        <div class="container">
-            <app>Loading...</app>
-            <div id="blazor-error-ui">
-                An unhandled error has occurred.
-                <a href="" class="reload">Reload</a>
-                <a class="dismiss">🗙</a>
+    <header class="header mt-auto py-3">
+      <div class="container">
+        <div class="top-row px-4">
+          <strong>λ# Chat</strong>
+          <a href="http://lambdasharp.net" target="_blank" class="ml-md-auto">About λ#</a>
+        </div>
+      </div>
+    </header>
+
+    <main role="main" class="flex-shrink-0">
+      <div class="container">
+        <div class="main">
+          <app>
+            <div class="content px-4">
+              <img src="assets/Loading.gif" class="mx-auto d-block" alt="Loading...">
             </div>
+          </app>
+          <div id="blazor-error-ui">
+              An unhandled error has occurred.
+              <a href="" class="reload">Reload</a>
+              <a class="dismiss">🗙</a>
+          </div>
         </div>
-      </main>
-      <footer class="footer mt-auto py-3">
-        <div class="container">
-            <span class="text-muted">made with ❤️ by λ#</span>
-        </div>
-      </footer>
-      <script src="_framework/blazor.webassembly.js"></script>
+      </div>
+    </main>
+
+    <footer class="footer mt-auto py-3">
+      <div class="container">
+          <span class="text-muted">made with ❤️ by λ#</span>
+      </div>
+    </footer>
+    <script src="_framework/blazor.webassembly.js"></script>
+
   </body>
 </html>

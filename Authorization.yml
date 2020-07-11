@@ -1,0 +1,119 @@
+# Cognito Authentication
+- Resource: UserPool
+  Type: AWS::Cognito::UserPool
+  Properties:
+    AliasAttributes:
+      - email
+      - preferred_username
+    AutoVerifiedAttributes:
+      - email
+    EmailVerificationSubject: "Your λ# chat verification code"
+    Schema:
+      - Name: email
+        AttributeDataType: String
+        Mutable: false
+        Required: true
+    UsernameConfiguration:
+      CaseSensitive: false
+    UserPoolTags:
+      "LambdaSharp:Module": !Ref Module::FullName
+      "LambdaSharp:Stack": !Ref AWS::StackName
+
+- Resource: UserPoolClient
+  Type: AWS::Cognito::UserPoolClient
+  Properties:
+    AllowedOAuthFlows:
+      - code
+    AllowedOAuthFlowsUserPoolClient: true
+    AllowedOAuthScopes:
+      - openid
+    CallbackURLs:
+      - !Ref WebsiteLoginUrl
+    ExplicitAuthFlows:
+      - ALLOW_USER_SRP_AUTH
+      - ALLOW_REFRESH_TOKEN_AUTH
+    GenerateSecret: false
+    LogoutURLs:
+      - !Sub "https://${WebsiteCloudFront.DomainName}/logout"
+    PreventUserExistenceErrors: ENABLED
+    RefreshTokenValidity: 7 # days
+    SupportedIdentityProviders:
+      - COGNITO
+    UserPoolId: !Ref Authorization::UserPool
+
+- Resource: UserPoolDomain
+  Type: AWS::Cognito::UserPoolDomain
+  Properties:
+    Domain: !Select [ 2, !Split [ "/", !Ref AWS::StackId ]]
+    UserPoolId: !Ref Authorization::UserPool
+
+- Variable: Issuer
+  Scope: public
+  Value: !GetAtt Authorization::UserPool.ProviderURL
+
+- Variable: ClientId
+  Value: !Ref Authorization::UserPoolClient
+
+- Variable: UserPoolUri
+  Value: !Sub "https://${Authorization::UserPoolDomain}.auth.us-west-2.amazoncognito.com"
+
+- Resource: ConfigDocument
+  Type: LambdaSharp::S3::WriteJson
+  Properties:
+    Bucket: !Ref WebsiteBucket
+    Key: cognito.json
+    Contents:
+      ClientId: !Ref Authorization::ClientId
+      RedirectUri: !Ref WebsiteLoginUrl
+      UserPoolUri: !Ref Authorization::UserPoolUri
+      Foo: bar
+
+# WebSocket Authorization
+- Resource: JwtAuthorizer
+  Type: AWS::ApiGatewayV2::Authorizer
+  Properties:
+    Name: JwtAuthorizer
+    ApiId: !Ref Module::WebSocket
+    AuthorizerType: REQUEST
+    AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Authorization::JwtAuthorizerFunction.Arn}/invocations"
+    AuthorizerCredentialsArn: !GetAtt Authorization::JwtAuthorizerRole.Arn
+    IdentitySource:
+      #- route.request.header.Authorization
+      - route.request.querystring.id_token
+
+- Resource: JwtAuthorizerRole
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - apigateway.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    Policies:
+      - PolicyName: lambda
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: lambda:invokeFunction
+              Resource: !GetAtt Authorization::JwtAuthorizerFunction.Arn
+
+- Resource: JwtAuthorizerPermission
+  Type: AWS::Lambda::Permission
+  Properties:
+    Action: lambda:InvokeFunction
+    FunctionName: !GetAtt Authorization::JwtAuthorizerFunction.Arn
+    Principal: !Sub "apigateway.${AWS::URLSuffix}"
+    SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${Module::WebSocket}/${Module::WebSocket::StageName}/$connect"
+
+- Function: JwtAuthorizerFunction
+  Description: Authorize WebSocket connection using JWT
+  Memory: 256
+  Timeout: 30
+  Environment:
+    Issuer: !Ref Authorization::Issuer
+    Audience: !Ref Authorization::ClientId

@@ -101,6 +101,19 @@ This JSON message changes the user name to _Bob_ for the current user:
 }
 ```
 
+## Login Flow
+
+1. Show splash screen in `index.html`
+1. Continue showing the same splash screen when `Index.razor` loads
+1. Check if we have a JWT token stored.
+  1. If we do, attempt to log in with it. (optional: check if it has expired)
+  1. If login is successful, then prepare to show the full interface
+1. If we don't have JWT token or we failed to login with the one we had (probably b/c it's expired), show a `Login` button
+1. Button redirects to Cognito login form
+1. Cognito redirects back to Blazor app with `id_token=JWT` in URI fragment
+1. Store JWT in local storage
+1. Log into WebSocket
+
 ## DynamoDB Table
 
 ### User Record
@@ -194,10 +207,18 @@ The message record is created for each message sent by a user on a channel. The 
 - [x] Restrict access to S3 bucket to only allow CloudFront.
 - [x] Show previous messages when a user connects.
 - [x] Route WebSocket requests via CloudFront.
-- [ ] Allow users to create or join chat rooms.
-- [ ] Add UI for logging in.
-- [ ] Add Cognito user pool for user management.
+- [x] Allow users to create or join chat rooms.
+- [x] Add UI for logging in.
+- [x] Add Cognito user pool for user management.
+- [ ] Add logout experience.
+- [ ] Create user record at sign-in time with custom username (Cognito sign-up flow).
+- [ ] Add user interface for reporting errors/warnings/etc to the user.
+- [ ] Automatically refresh tokens and reconnect websocket in the background.
+- [ ] Allows users to create and join rooms.
+- [ ] Improve chat protocol to not send message during `$connect` route since the socket is not open yet.
 - [ ] Secure WebSocket so they must come through CloudFront.
+- [ ] Improve fan-out mechanism for sending messages to open connections.
+- [ ] Create a "Website" group in module to encapsulate the S3 bucket, the CloudFront distribution, the cache invalidation Lambda function.
 
 ## Acknowledgements
 

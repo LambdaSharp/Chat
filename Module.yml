@@ -18,7 +18,7 @@ Module: Demo.WebSocketsChat
 Pragmas:
   - Overrides:
       Module::WebSocket.RouteSelectionExpression: $request.body.Action
-      Module::WebSocket::StageName: chat
+      Module::WebSocket::StageName: socket
 Using:
   - Module: LambdaSharp.S3.IO@lambdasharp
 Items:
@@ -70,6 +70,8 @@ Items:
     Sources:
       - WebSocket: $connect
         Invoke: OpenConnection
+        AuthorizationType: CUSTOM
+        AuthorizerId: !Ref Authorization::JwtAuthorizer
 
       - WebSocket: $disconnect
         Invoke: CloseConnection
@@ -141,6 +143,10 @@ Items:
         Comment: !Sub "CloudFront Distribution for WebChat app (${AWS::StackName})"
         Enabled: true
         HttpVersion: http2
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
         DefaultRootObject: index.html
         PriceClass: PriceClass_100
         Origins:
@@ -177,8 +183,7 @@ Items:
             ViewerProtocolPolicy: https-only
 
   - Resource: WebsiteCloudFrontPermissions
-    Allow:
-        - cloudfront:CreateInvalidation
+    Allow: cloudfront:CreateInvalidation
     Value: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebsiteCloudFront}"
 
   - Resource: WebsiteCloudFrontIdentity
@@ -198,6 +203,14 @@ Items:
           - s3:ObjectCreated:*
           - s3:ObjectRemoved:*
 
+  # Cognito User Pool Information (TODO: don't use hardcoded values! this information should come from the Blazor app)
+  - Variable: WebsiteLoginUrl
+    Value: !Sub "https://${WebsiteCloudFront.DomainName}/login"
+
+  - Group: Authorization
+    Items: !Include Authorization.yml
+
+  # Initialize DataTable with minimal records
   - Function: Finalizer
     Description: Initialize DynamoDB table with default rows
     Memory: 256
@@ -208,8 +221,3 @@ Items:
     Description: Website URL
     Scope: public
     Value: !Sub "https://${WebsiteCloudFront.DomainName}/"
-
-  - Variable: WebSocketUrl
-    Description: WebSocket URL
-    Scope: public
-    Value: !Sub "https://${WebsiteCloudFront.DomainName}/chat"
