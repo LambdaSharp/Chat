@@ -212,6 +212,11 @@ The message record is created for each message sent by a user on a channel. The 
 - [x] Add Cognito user pool for user management.
 - [ ] Add logout experience.
 - [ ] Create user record at sign-in time with custom username (Cognito sign-up flow).
+- [ ] Enhance user interface with Blazor UI components.
+  - https://blazorise.com/
+  - https://blazor.radzen.com/
+- [ ] Enhance Cognito login user interface.
+- [ ] Enhance Splash graphic by changing colors based on "Loading, Connecting, Connected" state sequence.
 - [ ] Add user interface for reporting errors/warnings/etc to the user.
 - [ ] Automatically refresh tokens and reconnect websocket in the background.
 - [ ] Allows users to create and join rooms.
