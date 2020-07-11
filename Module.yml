@@ -271,8 +271,3 @@ Items:
     Description: Website URL
     Scope: public
     Value: !Sub "https://${WebsiteCloudFront.DomainName}/"
-
-  - Variable: WebSocketUrl
-    Description: WebSocket URL
-    Scope: public
-    Value: !Sub "https://${WebsiteCloudFront.DomainName}/socket"
