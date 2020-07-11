@@ -210,7 +210,9 @@ The message record is created for each message sent by a user on a channel. The 
 - [x] Allow users to create or join chat rooms.
 - [x] Add UI for logging in.
 - [x] Add Cognito user pool for user management.
+- [ ] Add logout experience.
 - [ ] Create user record at sign-in time with custom username (Cognito sign-up flow).
+- [ ] Add user interface for reporting errors/warnings/etc to the user.
 - [ ] Automatically refresh tokens and reconnect websocket in the background.
 - [ ] Allows users to create and join rooms.
 - [ ] Improve chat protocol to not send message during `$connect` route since the socket is not open yet.

@@ -20,7 +20,6 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Blazored.LocalStorage;
 using BlazorWebSocket.Common;
 using Demo.WebSocketsChat.Common.Notifications;
 using Demo.WebSocketsChat.Common.Requests;
@@ -28,7 +27,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace BlazorWebSocket.Pages {
 
-    public class IndexBase : ComponentBase, IDisposable {
+    public class IndexBase : ComponentWithLocalStorageBase, IDisposable {
 
         //--- Constants ---
         private const int TOKEN_EXPIRATION_LIMIT_SECONDS = 5 * 60;
@@ -52,7 +51,6 @@ namespace BlazorWebSocket.Pages {
         protected WebSocketDispatcher WebSocketDispatcher { get; set; }
         protected string LoginUrl;
         [Inject] private HttpClient HttpClient { get; set; }
-        [Inject] private ILocalStorageService LocalStorage { get; set; }
         [Inject] private CognitoSettings CognitoSettings { get; set; }
 
         //--- Methods ---
@@ -68,9 +66,8 @@ namespace BlazorWebSocket.Pages {
             // attempt to restore authentication tokens from local storage
             var authenticationTokens = await GetAuthenticationTokens();
             if(authenticationTokens == null) {
-
-                // TODO: create 'state' to protect against replay attacks
-                LoginUrl = CognitoSettings.GetLoginUrl(state: "TBD");
+                var guard = await CreateReplayGuardAsync();
+                LoginUrl = CognitoSettings.GetLoginUrl(guard);
                 Console.WriteLine($"Login URL: {LoginUrl}");
                 State = ConnectionState.Unauthorized;
             } else {
@@ -84,9 +81,8 @@ namespace BlazorWebSocket.Pages {
                 } else {
                     Console.WriteLine("Websocket connection failed");
                     await ClearAuthenticationTokens();
-
-                    // TODO: create 'state' to protect against replay attacks
-                    LoginUrl = CognitoSettings.GetLoginUrl(state: "TBD");
+                    var guard = await CreateReplayGuardAsync();
+                    LoginUrl = CognitoSettings.GetLoginUrl(guard);
                     Console.WriteLine($"Login URL: {LoginUrl}");
                     State = ConnectionState.Unauthorized;
                 }
@@ -169,7 +165,7 @@ namespace BlazorWebSocket.Pages {
         private async Task<AuthenticationTokens> GetAuthenticationTokens() {
 
             // check if any authentication tokens are stored
-            var authenticationTokens = await LocalStorage.GetItemAsync<AuthenticationTokens>("Tokens");
+            var authenticationTokens = await LoadTokensAsync();
             if(authenticationTokens == null) {
                 Console.WriteLine($"No authentication tokens found");
                 return null;
@@ -201,7 +197,7 @@ namespace BlazorWebSocket.Pages {
                 authenticationTokens.IdToken = refreshAuthenticationTokens.IdToken;
                 authenticationTokens.AccessToken = refreshAuthenticationTokens.AccessToken;
                 authenticationTokens.Expiration = refreshAuthenticationTokens.Expiration;
-                await LocalStorage.SetItemAsync("Tokens", authenticationTokens);
+                await SaveTokensAsync(authenticationTokens);
             } else {
                 Console.WriteLine($"Current authentication tokens valid until: {authenticationTokenExpiration}");
             }
@@ -210,7 +206,7 @@ namespace BlazorWebSocket.Pages {
 
         private async Task ClearAuthenticationTokens() {
             Console.WriteLine("Clearing old authentication tokens");
-            await LocalStorage.RemoveItemAsync("Tokens");
+            await ClearTokensAsync();
         }
 
         //--- IDisposable Members ---

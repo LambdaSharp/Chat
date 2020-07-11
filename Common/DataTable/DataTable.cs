@@ -28,29 +28,6 @@ using Demo.WebSocketsChat.Common.Records;
 
 namespace Demo.WebSocketsChat.Common.DataStore {
 
-    public static class TableEx {
-
-        //--- Extension Methods ---
-        public static Search QueryBeginsWith(this Table table, Primitive hashKey, Primitive rangeKeyPrefix) {
-            var filter = new QueryFilter();
-            filter.AddCondition("PK", QueryOperator.Equal, new DynamoDBEntry[] { hashKey });
-            filter.AddCondition("SK", QueryOperator.BeginsWith, new DynamoDBEntry[] { rangeKeyPrefix });
-            return table.Query(new QueryOperationConfig {
-                Filter = filter
-            });
-        }
-
-        public static Search QueryGS1BeginsWith(this Table table, Primitive hashKey, Primitive rangeKeyPrefix) {
-            var filter = new QueryFilter();
-            filter.AddCondition("GS1PK", QueryOperator.Equal, new DynamoDBEntry[] { hashKey });
-            filter.AddCondition("GS1SK", QueryOperator.BeginsWith, new DynamoDBEntry[] { rangeKeyPrefix });
-            return table.Query(new QueryOperationConfig {
-                IndexName = "GS1",
-                Filter = filter
-            });
-        }
-    }
-
     public sealed class DataTable {
 
         //--- Constants ---

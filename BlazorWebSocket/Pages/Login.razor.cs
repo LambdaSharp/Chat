@@ -21,20 +21,18 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
-using Blazored.LocalStorage;
 using BlazorWebSocket.Common;
 using Microsoft.AspNetCore.Components;
 
 namespace BlazorWebSocket.Pages {
 
-    public class LoginBase : ComponentBase {
+    public class LoginBase : ComponentWithLocalStorageBase {
 
         //--- Properties ---
         protected string LoginUrl { get; set; }
         [Inject] private HttpClient HttpClient { get; set; }
         [Inject] private NavigationManager NavigationManager { get; set; }
         [Inject] private CognitoSettings CognitoSettings { get; set; }
-        [Inject] private ILocalStorageService LocalStorage { get; set; }
 
         //--- Methods ---
         protected override async Task OnInitializedAsync() {
@@ -47,8 +45,13 @@ namespace BlazorWebSocket.Pages {
             var code = queryParameters["code"];
             if(!string.IsNullOrEmpty(code)) {
 
-                // TODO: use 'state' to protect against replay attacks
+                // ensure the replay guard matches
                 var state = queryParameters["state"];
+                if(!await VerifyReplayGuardAsync(state)) {
+
+                    // TODO: report login error to user
+                    throw new NotImplementedException("replay guard failed");
+                }
 
                 // fetch the authorization token from Cognito
                 Console.WriteLine($"Fetching authentication tokens for code grant: {code}");
@@ -65,6 +68,10 @@ namespace BlazorWebSocket.Pages {
                     Console.WriteLine($"Storing authentication tokens: {json}");
                     var authenticationTokens = AuthenticationTokens.FromJson(json);
                     await LocalStorage.SetItemAsync("Tokens", authenticationTokens);
+                } else {
+
+                    // TODO: report login error to user
+                    throw new NotImplementedException("unable to retreive authentication tokens");
                 }
 
                 // navigate back to main page to connect to the websocket
