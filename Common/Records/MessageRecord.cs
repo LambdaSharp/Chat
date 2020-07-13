@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-namespace Demo.WebSocketsChat.Common.Records {
+namespace LambdaSharp.Chat.Common.Records {
 
     public sealed class MessageRecord {
 

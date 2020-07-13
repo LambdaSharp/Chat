@@ -24,9 +24,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DocumentModel;
-using Demo.WebSocketsChat.Common.Records;
+using LambdaSharp.Chat.Common.Records;
 
-namespace Demo.WebSocketsChat.Common.DataStore {
+namespace LambdaSharp.Chat.Common.DataStore {
 
     public sealed class DataTable {
 

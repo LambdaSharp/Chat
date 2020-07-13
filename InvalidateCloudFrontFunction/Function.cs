@@ -23,7 +23,7 @@ using Amazon.CloudFront.Model;
 using Amazon.Lambda.S3Events;
 using LambdaSharp;
 
-namespace Demo.WebSocketsChat.InvalidateCloudFrontFunction {
+namespace LambdaSharp.Chat.InvalidateCloudFrontFunction {
 
     public class Function : ALambdaFunction<S3Event, string> {
 

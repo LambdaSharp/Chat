@@ -19,7 +19,7 @@
 using Amazon.Lambda.APIGatewayEvents;
 using Newtonsoft.Json;
 
-namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
+namespace LambdaSharp.Chat.JwtAuthorizerFunction {
 
     public class AuthorizationRequest : APIGatewayProxyRequest {
 

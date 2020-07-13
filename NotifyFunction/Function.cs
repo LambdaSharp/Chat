@@ -26,11 +26,11 @@ using Amazon.ApiGatewayManagementApi.Model;
 using Amazon.DynamoDBv2;
 using Amazon.Runtime;
 using LambdaSharp;
-using Demo.WebSocketsChat.Common;
+using LambdaSharp.Chat.Common;
 using LambdaSharp.SimpleQueueService;
-using Demo.WebSocketsChat.Common.DataStore;
+using LambdaSharp.Chat.Common.DataStore;
 
-namespace Demo.WebSocketsChat.NotifyFunction {
+namespace LambdaSharp.Chat.NotifyFunction {
 
     public sealed class Function : ALambdaQueueFunction<BroadcastMessage> {
 

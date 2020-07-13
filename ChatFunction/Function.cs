@@ -23,15 +23,15 @@ using Amazon.Lambda.APIGatewayEvents;
 using Amazon.SQS;
 using LambdaSharp;
 using LambdaSharp.ApiGateway;
-using Demo.WebSocketsChat.Common;
-using Demo.WebSocketsChat.Common.Records;
+using LambdaSharp.Chat.Common;
+using LambdaSharp.Chat.Common.Records;
 using System.Runtime.CompilerServices;
-using Demo.WebSocketsChat.Common.DataStore;
-using Demo.WebSocketsChat.Common.Notifications;
-using Demo.WebSocketsChat.Common.Requests;
+using LambdaSharp.Chat.Common.DataStore;
+using LambdaSharp.Chat.Common.Notifications;
+using LambdaSharp.Chat.Common.Requests;
 using System.Collections.Generic;
 
-namespace Demo.WebSocketsChat.ChatFunction {
+namespace LambdaSharp.Chat.ChatFunction {
 
     public sealed class Function : ALambdaApiGatewayFunction {
 
@@ -94,7 +94,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
             };
             await _dataTable.CreateConnectionAsync(connection);
 
-            // notify all connections about renamed user
+            // notify all connections about joining user
             await NotifyAsync(userId: userId, channelId: null, new WelcomeNotification {
                 UserId = user.UserId,
                 UserName = user.UserName

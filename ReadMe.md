@@ -1,27 +1,66 @@
-# LambdaSharp - Create a Web Chat with API Gateway WebSockets and ASP.NET Core Blazor WebAssembly
+# LambdaSharp.Chat - A Chat app built with Blazor WebAssembly, AWS Cognito, WebSockets, DynamoDB, and Lambda Functions
 
 [This sample requires the LambdaSharp CLI to deploy.](https://lambdasharp.net/)
 
 ## Overview
 
-This LambdaSharp module creates a web chat front-end using [ASP.NET Core Blazor WebAssembly](https://docs.microsoft.com/en-us/aspnet/core/blazor/get-started) and back-end using [API Gateway V2 WebSocket](https://aws.amazon.com/blogs/compute/announcing-websocket-apis-in-amazon-api-gateway/) as self-contained CloudFormation template. The front-end is served by an S3 bucket and secured by a CloudFront distribution. The front-end code is delivered as [WebAssembly](https://webassembly.org/) using ASP.NET Core Blazor. The back-end uses API Gateway V2 WebSocket to facilitate communication between clients. The code and assets for the front-end are built by `dotnet` and then copied to the S3 bucket during deployment. Afterwards, a CloudFront distribution is created to provide secure access over `https://` to the front-end. Finally, an API Gateway V2 WebSocket is deployed with two Lambda functions that handle WebSocket connections and message notifications.
+This LambdaSharp module creates a chat application built with [ASP.NET Core Blazor WebAssembly](https://docs.microsoft.com/en-us/aspnet/core/blazor/get-started) for the front-end, [Amazon Cognito](https://aws.amazon.com/cognito/) for user authentication, [API Gateway WebSocket](https://aws.amazon.com/blogs/compute/announcing-websocket-apis-in-amazon-api-gateway/) for communication, [Amazon DynamoDB](https://aws.amazon.com/dynamodb/) for storage using a single-table design, and [AWS Lambda](https://aws.amazon.com/lambda/) for the business logic written in C#. Finally, the application is delivered as as self-contained [AWS CloudFormation](https://aws.amazon.com/cloudformation/) template.
 
 > **NOTE:** This LambdaSharp module requires .NET Core 3.1.300 and LambdaSharp.Tool 0.8.0.5, or later.
 
-![WebChat](Assets/LambdaSharpWebChat.png)
+![LambdaSharp.Chat](Assets/LambdaSharpWebChat.png)
 
-## Deploy Module
+## Deploy LambdaSharp.Chat Module
 
-This module is compiled to CloudFormation and deployed using the LambdaSharp CLI.
+_LambdaSharp.Chat_ requires an [AWS account](https://aws.amazon.com/) and a LambdaSharp deployment tier. Follow the [_Getting Started_](https://lambdasharp.net/articles/Setup.html) instructions for the initial setup.
+
+> **NOTE:** Creating the CloudFront distribution takes up to 5 minutes. Granting permission for CloudFront to access the private S3 bucket can take up to an hour! Please be patient.
+
+**To deploy the application directly:**
+
+Use the LambdaSharp CLI to import and deploy the module to the deployment tier as follows:
 ```
-git clone https://github.com/LambdaSharp/WebSocketsChat-Sample.git
-cd WebSocketsChat-Sample
+lash deploy LambdaSharp.Chat:1.0-DEV@lambdasharp
+```
+
+**To build and deploy application from a git checkout:**
+
+To check out the git repository, build it locally, and then deploy the application, follow these steps:
+```
+git clone https://github.com/LambdaSharp/LambdaSharp-Chat.git
+cd LambdaSharp-Chat
 lash deploy
 ```
 
+### Deployment Details
+
+The following resources are created by CloudFormation during the deployment:
+
+1. A DynamoDB table with a secondary index for persistent storage.
+1. A Cognito User Pool to manage users.
+1. An API Gateway WebSocket to connect the front-end and back-end.
+1. A Lambda function to authenticate WebSocket connections.
+1. A Lambda function to handle WebSocket requests.
+1. A Lambda function to broadcast messages to all open connections.
+1. A private S3 bucket for hosting the application front-end assets.
+1. A custom resource top copy the _wwwroot_ files to the S3 bucket using [brotli compression](https://en.wikipedia.org/wiki/Brotli).
+1. A CloudFront distribution to enable caching and `https://` access to the front-end assets.
+1. A Lambda function to invalidate cached assets in the CloudFront distribution when they get updated.
+1. A custom resource to generate the `cognito.json` file with the Cognito configuration.
+
+> **NOTE:** Creating the CloudFront distribution takes up to 5 minutes. Granting permission to CloudFront to access the private S3 bucket can take up to an hour!
+
+## ASP .NET Core Blazor WebAssembly
+
+The _BlazorWebSocket_ folder contains the front-end Blazor code, which integrates with the WebSocket and Cognito. The front-end files are served by an S3 bucket that is edge-accelerated and secured by a [Amazon CloudFront](https://aws.amazon.com/cloudfront/) distribution. A Lambda function monitors the S3 bucket and automatically invalidates the CloudFront cache when files are modified by a fresh deployment.
+
+Information about the Cognito User Pool is transferred to the front-end application via a JSON file generated by a custom CloudFormation resource during deployment. The JSON file is copied to the same S3 bucket as the Blazor files. Once the Blazor application starts, it fetches the Cognito configuration from the `/cognito.json` location.
+
 ## API Gateway .NET (WebSocket)
 
-During the build phase, LambdaSharp extracts the message schema from the .NET implementation and uses it to configure the API Gateway V2 instance. If an incoming does not confirm to the expected schema of the web-socket route, then API Gateway will automatically reject it before it reaches the Lambda function.
+To open a WebSocket connection, the front-end must supply a valid JWT authentication token obtained from Cognito. The token is validated by the _Authorization::JwtAuthorizer_ Lambda function during the connection attempt.
+
+During the build phase, LambdaSharp extracts the message schema from the C# implementation and uses it to configure the API Gateway WebSocket instance. If an incoming message does not conform to the expected schema of the WebSocket route, API Gateway will automatically reject it before it reaches the Lambda function.
 
 ```yaml
 - Function: ChatFunction
@@ -32,9 +71,11 @@ During the build phase, LambdaSharp extracts the message schema from the .NET im
 
     - WebSocket: $connect
       Invoke: OpenConnectionAsync
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref Authorization::JwtAuthorizer
 
     - WebSocket: $disconnect
-      Inpvoke: CloseConnectionAsync
+      Invoke: CloseConnectionAsync
 
     - WebSocket: send
       Invoke: SendMessageAsync
@@ -60,48 +101,7 @@ public class SendMessageRequest : AMessageRequest {
 }
 ```
 
-## CloudFormation Details
-
-The following happens when the module is deployed.
-
-1. Create a DynamoDB table with a secondary index to store application records.
-1. Deploy the `ChatFunction` to handle web-socket requests.
-1. Deploy `NotifyFunction` to broadcast messages to all open connections.
-1. Create a private S3 bucket.
-1. Create a bucket policy to CloudFront access.
-1. Create a `config.json` file with the websocket URL.
-1. Copy the `wwwroot` files to the S3 bucket using [brotli compression](https://en.wikipedia.org/wiki/Brotli).
-1. Create CloudFront distribution to enable https:// access to the S3-hosted website
-1. Create an SQS queue to buffer web-socket notifications.
-1. Show the website URL.
-1. Show the websocket URL.
-
-> **NOTE:** Creating the CloudFront distribution takes up to 5 minutes. Granting permission to CloudFront to access the private S3 bucket can take up to an hour!
-
-## Other Resources
-
-The following site allows direct interactions with the WebSocket end-point using the WebSocket URL.
-
-https://www.websocket.org/echo.html
-
-This JSON message sends a _"Hello World!"_ notification to all participants:
-```json
-{
-    "Action": "send",
-    "ChannelId": "General",
-    "Text": "Hello World!"
-}
-```
-
-This JSON message changes the user name to _Bob_ for the current user:
-```json
-{
-    "Action": "rename",
-    "UserName": "Bob"
-}
-```
-
-## Login Flow
+## User Interface Flow
 
 1. Show splash screen in `index.html`
 1. Continue showing the same splash screen when `Index.razor` loads
@@ -210,6 +210,7 @@ The message record is created for each message sent by a user on a channel. The 
 - [x] Allow users to create or join chat rooms.
 - [x] Add UI for logging in.
 - [x] Add Cognito user pool for user management.
+- [ ] Improve login experience.
 - [ ] Add logout experience.
 - [ ] Create user record at sign-in time with custom username (Cognito sign-up flow).
 - [ ] Enhance user interface with Blazor UI components.
@@ -224,6 +225,7 @@ The message record is created for each message sent by a user on a channel. The 
 - [ ] Secure WebSocket so they must come through CloudFront.
 - [ ] Improve fan-out mechanism for sending messages to open connections.
 - [ ] Create a "Website" group in module to encapsulate the S3 bucket, the CloudFront distribution, the cache invalidation Lambda function.
+- [ ] Add diagram for data record relationships.
 
 ## Acknowledgements
 
