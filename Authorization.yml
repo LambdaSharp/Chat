@@ -48,7 +48,6 @@
     UserPoolId: !Ref Authorization::UserPool
 
 - Variable: Issuer
-  Scope: public
   Value: !GetAtt Authorization::UserPool.ProviderURL
 
 - Variable: ClientId
