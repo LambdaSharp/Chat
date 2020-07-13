@@ -232,12 +232,13 @@ The message record is created for each message sent by a user on a channel. The 
 
 ## Contributors
 
-Many thanks to our contributors:
+Many thanks to our contributors (in alphabetical order):
 
-* @pattyr
-* @JuansonGrajales
-* @onema
-* @yurigorokhov
+* [@bjorg](https://github.com/bjorg)
+* [@JuansonGrajales](https://github.com/JuansonGrajales)
+* [@onema](https://github.com/onema)
+* [@pattyr](https://github.com/pattyr)
+* [@yurigorokhov](https://github.com/yurigorokhov)
 
 ## Acknowledgements
 
