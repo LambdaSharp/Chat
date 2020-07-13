@@ -230,6 +230,15 @@ The message record is created for each message sent by a user on a channel. The 
 - [ ] Add diagram for data record relationships.
 - [ ] Describe message protocol between front-end and back-end.
 
+## Contributors
+
+Many thanks to our contributors:
+
+* @pattyr
+* @JuansonGrajales
+* @onema
+* @yurigorokhov
+
 ## Acknowledgements
 
 This LambdaSharp module is a port of the [netcore-simple-websockets-chat-app](https://github.com/normj/netcore-simple-websockets-chat-app) sample for AWS Lambda. For more information [Announcing WebSocket APIs in Amazon API Gateway](https://aws.amazon.com/blogs/compute/announcing-websocket-apis-in-amazon-api-gateway/) blog post.
