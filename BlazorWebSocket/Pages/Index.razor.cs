@@ -21,8 +21,8 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using BlazorWebSocket.Common;
-using Demo.WebSocketsChat.Common.Notifications;
-using Demo.WebSocketsChat.Common.Requests;
+using LambdaSharp.Chat.Common.Notifications;
+using LambdaSharp.Chat.Common.Requests;
 using Microsoft.AspNetCore.Components;
 
 namespace BlazorWebSocket.Pages {

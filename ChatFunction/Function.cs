@@ -23,15 +23,15 @@ using Amazon.Lambda.APIGatewayEvents;
 using Amazon.SQS;
 using LambdaSharp;
 using LambdaSharp.ApiGateway;
-using Demo.WebSocketsChat.Common;
-using Demo.WebSocketsChat.Common.Records;
+using LambdaSharp.Chat.Common;
+using LambdaSharp.Chat.Common.Records;
 using System.Runtime.CompilerServices;
-using Demo.WebSocketsChat.Common.DataStore;
-using Demo.WebSocketsChat.Common.Notifications;
-using Demo.WebSocketsChat.Common.Requests;
+using LambdaSharp.Chat.Common.DataStore;
+using LambdaSharp.Chat.Common.Notifications;
+using LambdaSharp.Chat.Common.Requests;
 using System.Collections.Generic;
 
-namespace Demo.WebSocketsChat.ChatFunction {
+namespace LambdaSharp.Chat.ChatFunction {
 
     public sealed class Function : ALambdaApiGatewayFunction {
 
@@ -58,28 +58,20 @@ namespace Demo.WebSocketsChat.ChatFunction {
             // get the user id from the authorizer metadata
             request.RequestContext.Authorizer.TryGetValue("sub", out var subject);
             var userId = subject as string;
+            if(userId == null) {
+
+                // TODO: improve exception
+                throw new Exception("Unauthenticated access detected");
+            }
 
             // check if a user already exists or create a new one
-            UserRecord user = null;
-            if(userId != null) {
-                user = await _dataTable.GetUserAsync(userId);
-
-                // could not find user, reset user id
-                if(user == null) {
-                    userId = null;
-                }
-            }
-            if(userId == null) {
-                userId = DataTable.GetRandomString(6);
-            }
-
-            // check if a new user is joining
+            var user = await _dataTable.GetUserAsync(userId);
             if(user == null) {
 
                 // create user record
                 user = new UserRecord {
                     UserId = userId,
-                    UserName = $"User-{userId}"
+                    UserName = $"User-{DataTable.GetRandomString(6)}"
                 };
                 await _dataTable.CreateUserAsync(user);
 
@@ -102,7 +94,7 @@ namespace Demo.WebSocketsChat.ChatFunction {
             };
             await _dataTable.CreateConnectionAsync(connection);
 
-            // notify all connections about renamed user
+            // notify all connections about joining user
             await NotifyAsync(userId: userId, channelId: null, new WelcomeNotification {
                 UserId = user.UserId,
                 UserName = user.UserName

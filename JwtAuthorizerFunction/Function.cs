@@ -25,7 +25,7 @@ using LambdaSharp;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 
-namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
+namespace LambdaSharp.Chat.JwtAuthorizerFunction {
 
     public sealed class Function : ALambdaFunction<AuthorizationRequest, AuthorizationResponse> {
 

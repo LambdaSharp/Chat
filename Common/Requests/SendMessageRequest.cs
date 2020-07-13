@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-namespace Demo.WebSocketsChat.Common.Requests {
+namespace LambdaSharp.Chat.Common.Requests {
 
     public sealed class SendMessageRequest : AMessageRequest {
 

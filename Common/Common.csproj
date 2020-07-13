@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RootNamespace>Demo.WebSocketsChat.Common</RootNamespace>
+    <RootNamespace>LambdaSharp.Chat.Common</RootNamespace>
     <NoWarn>CS1998</NoWarn>
   </PropertyGroup>
   <ItemGroup>

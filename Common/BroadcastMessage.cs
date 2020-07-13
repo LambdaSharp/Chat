@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-namespace Demo.WebSocketsChat.Common {
+namespace LambdaSharp.Chat.Common {
 
     public class BroadcastMessage {
 

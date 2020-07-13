@@ -19,7 +19,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace Demo.WebSocketsChat.JwtAuthorizerFunction {
+namespace LambdaSharp.Chat.JwtAuthorizerFunction {
 
     public class AuthorizationResponse {
 

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-namespace Demo.WebSocketsChat.Common.Notifications {
+namespace LambdaSharp.Chat.Common.Notifications {
 
     public abstract class ANotification {
 

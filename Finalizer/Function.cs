@@ -1,11 +1,11 @@
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
-using Demo.WebSocketsChat.Common.DataStore;
-using Demo.WebSocketsChat.Common.Records;
+using LambdaSharp.Chat.Common.DataStore;
+using LambdaSharp.Chat.Common.Records;
 using LambdaSharp;
 using LambdaSharp.Finalizer;
 
-namespace Demo.WebSocketsChat.Finalizer {
+namespace LambdaSharp.Chat.Finalizer {
 
     public sealed class Function : ALambdaFinalizerFunction {
 

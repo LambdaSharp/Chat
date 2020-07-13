@@ -18,7 +18,7 @@
 
 using Amazon.DynamoDBv2.DocumentModel;
 
-namespace Demo.WebSocketsChat.Common.DataStore {
+namespace LambdaSharp.Chat.Common.DataStore {
 
     internal static class TableEx {
 
