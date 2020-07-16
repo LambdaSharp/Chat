@@ -77,10 +77,16 @@ namespace LambdaSharp.Chat.ChatFunction {
             var user = await _dataTable.GetUserAsync(userId);
             if(user == null) {
 
+                // check if a user name was requested; otherwise, generate one
+                string userName;
+                if(!request.RequestContext.Authorizer.TryGetValue("cognito:username", out userName)) {
+                    userName = $"User-{DataTable.GetRandomString(6)}";
+                }
+
                 // create user record
                 user = new UserRecord {
                     UserId = userId,
-                    UserName = $"User-{DataTable.GetRandomString(6)}"
+                    UserName = userName
                 };
                 await _dataTable.CreateUserAsync(user);
 
@@ -111,9 +117,7 @@ namespace LambdaSharp.Chat.ChatFunction {
         }
 
         // [Route("hello")]
-        public async Task/*<WelcomeNotification>*/ HelloAsync(HelloRequest request) {
-
-            // NOTE: this method is invoked by messages with the "send" route key
+        public async Task<WelcomeNotification> HelloAsync(HelloRequest request) {
 
             // fetch the user record associated with this connection id
             var user = await GetUserFromConnectionId(CurrentRequest.RequestContext.ConnectionId);
@@ -141,33 +145,23 @@ namespace LambdaSharp.Chat.ChatFunction {
                     if(!welcomeUsers.TryGetValue(message.UserId, out var messageUser)) {
                         messageUser = await _dataTable.GetUserAsync(message.UserId);
                         welcomeUsers.Add(message.UserId, messageUser);
+                    }
                 }
-            }
                 welcomeChannelMessages.Add(subscription.ChannelId, channelMessages);
-        }
+            }
 
-            // TODO: this should not be needed
-            await NotifyAsync(userId: user.UserId, channelId: null, new WelcomeNotification {
+            // inform new connection about user state
+            return new WelcomeNotification {
                 UserId = user.UserId,
                 UserName = user.UserName,
                 Channels = welcomeChannels.OrderBy(channel => channel.ChannelName.ToLowerInvariant()).ToList(),
                 Users = welcomeUsers.Values.ToList(),
                 ChannelMessages = welcomeChannelMessages
-            });
-
-            // inform new connection about user state
-            // return new WelcomeNotification {
-            //     UserId = user.UserId,
-            //     UserName = user.UserName,
-            //     ChannelMessages = welcomeChannelMessages,
-            //     Users = welcomeUsers
-            // };
+            };
         }
 
         // [Route("send")]
         public async Task SendMessageAsync(SendMessageRequest request) {
-
-            // NOTE: this method is invoked by messages with the "send" route key
 
             // fetch the user record associated with this connection id
             var user = await GetUserFromConnectionId(CurrentRequest.RequestContext.ConnectionId);
@@ -198,8 +192,6 @@ namespace LambdaSharp.Chat.ChatFunction {
 
         // [Route("rename")]
         public async Task RenameUserAsync(RenameUserRequest request) {
-
-            // NOTE: this method is invoked by messages with the "rename" route key
 
             // fetch the user record associated with this connection id
             var user = await GetUserFromConnectionId(CurrentRequest.RequestContext.ConnectionId);
