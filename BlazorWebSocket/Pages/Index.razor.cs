@@ -18,10 +18,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using BlazorWebSocket.Common;
 using LambdaSharp.Chat.Common.Notifications;
+using LambdaSharp.Chat.Common.Records;
 using LambdaSharp.Chat.Common.Requests;
 using Microsoft.AspNetCore.Components;
 
@@ -40,10 +42,8 @@ namespace BlazorWebSocket.Pages {
             Connected
         }
 
-        //--- Fields ---
-
         //--- Properties ---
-        protected List<UserMessageChangedNotification> Messages { get; set; } = new List<UserMessageChangedNotification>();
+        protected List<UserMessageNotification> Messages { get; set; } = new List<UserMessageNotification>();
         protected string ChatMessage { get; set; }
         protected string UserId { get; set; }
         protected string UserName { get; set; }
@@ -58,7 +58,7 @@ namespace BlazorWebSocket.Pages {
 
             // configure WebSocket dispatcher
             WebSocketDispatcher = new WebSocketDispatcher(new Uri($"wss://{HttpClient.BaseAddress.Host}/socket"));
-            WebSocketDispatcher.RegisterAction<UserMessageChangedNotification>("message", ReceivedMessage);
+            WebSocketDispatcher.RegisterAction<UserMessageNotification>("message", ReceivedMessage);
             WebSocketDispatcher.RegisterAction<UserNameChangedNotification>("username", ReceivedUserNameChanged);
             WebSocketDispatcher.RegisterAction<WelcomeNotification>("welcome", ReceivedWelcomeAsync);
             WebSocketDispatcher.RegisterAction<JoinedChannelNotification>("joined", ReceivedJoinedChannel);
@@ -78,6 +78,7 @@ namespace BlazorWebSocket.Pages {
                 WebSocketDispatcher.IdToken = authenticationTokens.IdToken;
                 if(await WebSocketDispatcher.Connect()) {
                     Console.WriteLine("Websocket connection succeeded");
+                    await WebSocketDispatcher.SendMessageAsync(new HelloRequest());
                 } else {
                     Console.WriteLine("Websocket connection failed");
                     await ClearAuthenticationTokens();
@@ -105,7 +106,7 @@ namespace BlazorWebSocket.Pages {
             });
         }
 
-        private void ReceivedMessage(UserMessageChangedNotification message) {
+        private void ReceivedMessage(UserMessageNotification message) {
             Console.WriteLine($"Received UserMessage: UserId={message.UserId}, UserName={message.UserName}, ChannelId={message.ChannelId}, Text='{message.Text}', Timestamp={message.Timestamp}");
 
             // add message to message list
@@ -126,7 +127,7 @@ namespace BlazorWebSocket.Pages {
             }
 
             // show message about renamed user
-            Messages.Add(new UserMessageChangedNotification {
+            Messages.Add(new UserMessageNotification {
                 UserId = "#host",
                 Text = $"{username.OldUserName} is now known as {username.UserName}",
                 Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
@@ -139,10 +140,27 @@ namespace BlazorWebSocket.Pages {
         private async Task ReceivedWelcomeAsync(WelcomeNotification welcome) {
             Console.WriteLine($"Received Welcome: UserId={welcome.UserId}, UserName={welcome.UserName}");
 
+            // TODO: determine which channel has the focus
+            // TODO: add all focused channel messages
+            // TODO: highlight all unfocused channels that new messages have arrived
+
             // update application state
             UserId = welcome.UserId;
             UserName = welcome.UserName;
             State = ConnectionState.Connected;
+
+            // add all messages for 'General' channel
+            const string channelId = "General";
+            IEnumerable<MessageRecord> messages = new List<MessageRecord>();
+            if(welcome.ChannelMessages?.TryGetValue(channelId, out messages) ?? false) {
+                Messages.AddRange(messages.Select(message => new UserMessageNotification {
+                    UserId = message.UserId,
+                    UserName = welcome.Users[message.UserId].UserName,
+                    ChannelId = channelId,
+                    Text = message.Message,
+                    Timestamp = message.Timestamp
+                }));
+            }
 
             // update user interface
             StateHasChanged();
@@ -152,7 +170,7 @@ namespace BlazorWebSocket.Pages {
             Console.WriteLine($"Received JoinedChannel: UserId={joined.UserId}, UserName={joined.UserName}, ChannelId={joined.ChannelId}");
 
             // show message about renamed user
-            Messages.Add(new UserMessageChangedNotification {
+            Messages.Add(new UserMessageNotification {
                 UserId = "#host",
                 Text = $"{joined.UserName} has joined",
                 Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()

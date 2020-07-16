@@ -18,10 +18,10 @@
 
 namespace LambdaSharp.Chat.Common.Notifications {
 
-    public sealed class UserMessageChangedNotification : ANotification {
+    public sealed class UserMessageNotification : ANotification {
 
         //--- Constructors ---
-        public UserMessageChangedNotification() => Action = "message";
+        public UserMessageNotification() => Action = "message";
 
         //--- Properties ---
         public string UserId { get; set; }

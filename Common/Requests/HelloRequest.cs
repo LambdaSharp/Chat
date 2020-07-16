@@ -16,20 +16,11 @@
  * limitations under the License.
  */
 
-using System.Collections.Generic;
-using LambdaSharp.Chat.Common.Records;
+namespace LambdaSharp.Chat.Common.Requests {
 
-namespace LambdaSharp.Chat.Common.Notifications {
-
-    public sealed class WelcomeNotification : ANotification  {
+    public sealed class HelloRequest : AMessageRequest {
 
         //--- Constructors ---
-        public WelcomeNotification() => Action = "welcome";
-
-        //--- Properties ---
-        public string UserId { get; set; }
-        public string UserName { get; set; }
-        public Dictionary<string, IEnumerable<MessageRecord>> ChannelMessages { get; set; }
-        public Dictionary<string, UserRecord> Users { get; set; }
+        public HelloRequest() => Action = "hello";
     }
 }
