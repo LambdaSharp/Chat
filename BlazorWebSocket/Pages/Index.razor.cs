@@ -43,9 +43,11 @@ namespace BlazorWebSocket.Pages {
             Connecting,
             Connected
         }
-        Sidebar sidebar;
-        
-        SidebarInfo sidebarInfo = new SidebarInfo {
+
+        //--- Fields ---
+        // protected Sidebar _sidebar;
+
+        protected SidebarInfo _sidebarInfo = new SidebarInfo {
             Brand = new SidebarBrandInfo {
                 Text = "LambdaSharp Chat"
             },
@@ -168,17 +170,19 @@ namespace BlazorWebSocket.Pages {
 
             var channelIds = welcome.ChannelMessages.Keys.OrderBy(key => key.ToLowerInvariant());
             foreach(var channelId in channelIds) {
-                sidebarInfo.Items[0].SubItems.Add(new SidebarItemInfo { To = "#", Text = channelId });
+                _sidebarInfo.Items[0].SubItems.Add(new SidebarItemInfo { To = "#", Text = channelId });
             }
 
             // add all messages for 'General' channel
-            const string channelId = "General";
+
+            // TODO: retrieve active channel from local storage
+            const string channelIdConst = "General";
             IEnumerable<MessageRecord> messages = new List<MessageRecord>();
-            if(welcome.ChannelMessages?.TryGetValue(channelId, out messages) ?? false) {
+            if(welcome.ChannelMessages?.TryGetValue(channelIdConst, out messages) ?? false) {
                 Messages.AddRange(messages.Select(message => new UserMessageNotification {
                     UserId = message.UserId,
                     UserName = welcome.Users[message.UserId].UserName,
-                    ChannelId = channelId,
+                    ChannelId = channelIdConst,
                     Text = message.Message,
                     Timestamp = message.Timestamp
                 }));
@@ -248,12 +252,6 @@ namespace BlazorWebSocket.Pages {
             Console.WriteLine("Clearing old authentication tokens");
             await ClearTokensAsync();
         }
-        
-        // private async Task ListUserChannels() {
-        //     // TODO: get list of channels for current user from dynamodb
-
-        //     StateHasChanged();
-        // }
 
         //--- IDisposable Members ---
         void IDisposable.Dispose() => WebSocketDispatcher.Dispose();

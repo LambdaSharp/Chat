@@ -16,7 +16,7 @@
     <img src="assets/Loading.gif" class="mx-auto d-block" alt="Connecting...">
 } else if(State == ConnectionState.Connected) {
 
-    <Sidebar Data="@sidebarInfo" />
+    <Sidebar Data="@_sidebarInfo" />
 
     @* render chat user interface *@
     <form @onsubmit="RenameUserAsync">
