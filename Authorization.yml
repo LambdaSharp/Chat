@@ -54,7 +54,7 @@
   Value: !Ref Authorization::UserPoolClient
 
 - Variable: UserPoolUri
-  Value: !Sub "https://${Authorization::UserPoolDomain}.auth.us-west-2.amazoncognito.com"
+  Value: !Sub "https://${Authorization::UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com"
 
 - Resource: ConfigDocument
   Type: LambdaSharp::S3::WriteJson

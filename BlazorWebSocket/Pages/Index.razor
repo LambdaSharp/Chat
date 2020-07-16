@@ -1,3 +1,5 @@
+@using Blazorise
+@using Blazorise.Sidebar
 @inherits IndexBase
 @page "/"
 
@@ -15,6 +17,8 @@
     @* TODO: show splash in a different color *@
     <img src="assets/Loading.gif" class="mx-auto d-block" alt="Connecting...">
 } else if(State == ConnectionState.Connected) {
+
+    <Sidebar Data="@sidebarInfo" />
 
     @* render chat user interface *@
     <form @onsubmit="RenameUserAsync">
@@ -57,4 +61,33 @@
     </div>
 } else {
     <h3>Unexpected state... (@State)</h3>
+}
+
+
+
+@code {
+    Sidebar sidebar;
+    
+    SidebarInfo sidebarInfo = new SidebarInfo {
+        Brand = new SidebarBrandInfo {
+            Text = "LambdaSharp Chat"
+        },
+        Items = new List<SidebarItemInfo> {
+            new SidebarItemInfo {
+                Text = "Chats",
+                Icon = IconName.Mail,
+                SubItems = new List<SidebarItemInfo> {
+                    new SidebarItemInfo { To = "#", Text = "General" }
+                }
+            },
+            new SidebarItemInfo {
+                Text = "Create Chat",
+                To = "/create"
+            },
+        }
+    };
+
+    @* foreach(var userChannel in UserChannelList.Select((x, i) => new { Value = x, Index = i })) {
+        sidebarInfo.Items[0].SubItems.Add(new SidebarItemInfo { To = "#", Text = userChannel.ChannelName });
+    } *@
 }

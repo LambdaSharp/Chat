@@ -50,6 +50,7 @@ namespace BlazorWebSocket.Pages {
         protected ConnectionState State { get; set; } = ConnectionState.Initializing;
         protected WebSocketDispatcher WebSocketDispatcher { get; set; }
         protected string LoginUrl;
+        // protected List<ChannelRecord> UserChannelList {get; set;}
         [Inject] private HttpClient HttpClient { get; set; }
         [Inject] private CognitoSettings CognitoSettings { get; set; }
 
@@ -144,6 +145,13 @@ namespace BlazorWebSocket.Pages {
             UserName = welcome.UserName;
             State = ConnectionState.Connected;
 
+            // UserChannelList = new List<ChannelRecord> {
+            //     new ChannelRecord {
+            //         ChannelId = "foobarid",
+            //         ChannelName = "foobar"
+            //     }
+            // };
+
             // update user interface
             StateHasChanged();
         }
@@ -208,6 +216,12 @@ namespace BlazorWebSocket.Pages {
             Console.WriteLine("Clearing old authentication tokens");
             await ClearTokensAsync();
         }
+        
+        // private async Task ListUserChannels() {
+        //     // TODO: get list of channels for current user from dynamodb
+
+        //     StateHasChanged();
+        // }
 
         //--- IDisposable Members ---
         void IDisposable.Dispose() => WebSocketDispatcher.Dispose();

@@ -24,6 +24,9 @@ using Blazored.LocalStorage;
 using BlazorWebSocket.Common;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Blazorise;
+using Blazorise.Bootstrap;
+using Blazorise.Icons.FontAwesome;
 
 namespace BlazorWebSocket {
 
@@ -36,6 +39,12 @@ namespace BlazorWebSocket {
 
             // add HttpClient singleton configured with base address
             var http = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
+            builder.Services
+            .AddBlazorise( options => {
+                options.ChangeTextOnKeyPress = true;
+            } )
+            .AddBootstrapProviders()
+            .AddFontAwesomeIcons();
             builder.Services.AddSingleton(_ => http);
 
             // add Cognito User Pool settings by reading config file from S3 bucket
@@ -44,7 +53,14 @@ namespace BlazorWebSocket {
 
             // enable access to browser local storage
             builder.Services.AddBlazoredLocalStorage();
-            await builder.Build().RunAsync();
+            var host = builder.Build();
+
+            host.Services
+            .UseBootstrapProviders()
+            .UseFontAwesomeIcons();
+
+            await host.RunAsync();
+            // await builder.Build().RunAsync();
         }
     }
 }
