@@ -256,6 +256,7 @@ The message record is created for each message sent by a user on a channel. The 
 - [ ] Create a "Website" group in module to encapsulate the S3 bucket, the CloudFront distribution, the cache invalidation Lambda function.
 - [ ] Add diagram for data record relationships.
 - [ ] Describe message protocol between front-end and back-end.
+- [ ] Define WebSocket sub-protocol
 
 ## Contributors
 
