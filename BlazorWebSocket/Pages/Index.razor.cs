@@ -21,6 +21,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Blazorise;
+using Blazorise.Sidebar;
 using BlazorWebSocket.Common;
 using LambdaSharp.Chat.Common.Notifications;
 using LambdaSharp.Chat.Common.Records;
@@ -41,6 +43,20 @@ namespace BlazorWebSocket.Pages {
             Connecting,
             Connected
         }
+        Sidebar sidebar;
+        
+        SidebarInfo sidebarInfo = new SidebarInfo {
+            Brand = new SidebarBrandInfo {
+                Text = "LambdaSharp Chat"
+            },
+            Items = new List<SidebarItemInfo> {
+                new SidebarItemInfo {
+                    Text = "Chats",
+                    Icon = IconName.Mail,
+                    SubItems = new List<SidebarItemInfo>()
+                }
+            }
+        };
 
         //--- Properties ---
         protected List<UserMessageNotification> Messages { get; set; } = new List<UserMessageNotification>();
@@ -150,13 +166,11 @@ namespace BlazorWebSocket.Pages {
             UserName = welcome.UserName;
             State = ConnectionState.Connected;
 
-            // UserChannelList = new List<ChannelRecord> {
-            //     new ChannelRecord {
-            //         ChannelId = "foobarid",
-            //         ChannelName = "foobar"
-            //     }
-            // };
-            
+            var channelIds = welcome.ChannelMessages.Keys.OrderBy(key => key.ToLowerInvariant());
+            foreach(var channelId in channelIds) {
+                sidebarInfo.Items[0].SubItems.Add(new SidebarItemInfo { To = "#", Text = channelId });
+            }
+
             // add all messages for 'General' channel
             const string channelId = "General";
             IEnumerable<MessageRecord> messages = new List<MessageRecord>();
