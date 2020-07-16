@@ -76,6 +76,9 @@ Items:
       - WebSocket: $disconnect
         Invoke: CloseConnection
 
+      - WebSocket: hello
+        Invoke : Hello
+
       - WebSocket: send
         Invoke: SendMessage
 

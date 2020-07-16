@@ -18,5 +18,6 @@
   <ItemGroup>
     <Compile Include="..\Common\Notifications\*.cs" />
     <Compile Include="..\Common\Requests\*.cs" />
+    <Compile Include="..\Common\Records\*.cs" />
   </ItemGroup>
 </Project>
