@@ -79,7 +79,12 @@ namespace LambdaSharp.Chat.ChatFunction {
 
                 // check if a user name was requested; otherwise, generate one
                 string userName;
-                if(!request.RequestContext.Authorizer.TryGetValue("cognito:username", out userName)) {
+                if (
+                    request.RequestContext.Authorizer.TryGetValue("cognito:username", out var userNameObject)
+                    && (userNameObject is string userNameText)
+                ) {
+                    userName = userNameText;
+                } else {
                     userName = $"User-{DataTable.GetRandomString(6)}";
                 }
 
