@@ -30,6 +30,7 @@ using LambdaSharp.Chat.Common.DataStore;
 using LambdaSharp.Chat.Common.Notifications;
 using LambdaSharp.Chat.Common.Requests;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LambdaSharp.Chat.ChatFunction {
 
@@ -52,6 +53,7 @@ namespace LambdaSharp.Chat.ChatFunction {
             _dataTable = new DataTable(dataTableName, new AmazonDynamoDBClient());
         }
 
+        // [Route("$connect")]
         public async Task OpenConnectionAsync(APIGatewayProxyRequest request) {
             LogInfo($"Connected: {request.RequestContext.ConnectionId}");
 
@@ -64,14 +66,32 @@ namespace LambdaSharp.Chat.ChatFunction {
                 throw new Exception("Unauthenticated access detected");
             }
 
+            // create connection record
+            var connection = new ConnectionRecord {
+                ConnectionId = request.RequestContext.ConnectionId,
+                UserId = userId
+            };
+            await _dataTable.CreateConnectionAsync(connection);
+
             // check if a user already exists or create a new one
             var user = await _dataTable.GetUserAsync(userId);
             if(user == null) {
 
+                // check if a user name was requested; otherwise, generate one
+                string userName;
+                if (
+                    request.RequestContext.Authorizer.TryGetValue("cognito:username", out var userNameObject)
+                    && (userNameObject is string userNameText)
+                ) {
+                    userName = userNameText;
+                } else {
+                    userName = $"User-{DataTable.GetRandomString(6)}";
+                }
+
                 // create user record
                 user = new UserRecord {
                     UserId = userId,
-                    UserName = $"User-{DataTable.GetRandomString(6)}"
+                    UserName = userName
                 };
                 await _dataTable.CreateUserAsync(user);
 
@@ -80,51 +100,17 @@ namespace LambdaSharp.Chat.ChatFunction {
                     ChannelId = "General",
                     UserId = user.UserId
                 });
+
+                // TODO: consider making this a channel message -or- react to data-table changes
                 await NotifyAsync(userId: null, channelId: null, new JoinedChannelNotification {
                     UserId = user.UserId,
                     UserName = user.UserName,
                     ChannelId = "General"
                 }, delay: 1 /* TODO: only here b/c of the $connect race condition */);
             }
-
-            // create connection record
-            var connection = new ConnectionRecord {
-                ConnectionId = request.RequestContext.ConnectionId,
-                UserId = user.UserId
-            };
-            await _dataTable.CreateConnectionAsync(connection);
-
-            // notify all connections about joining user
-            await NotifyAsync(userId: userId, channelId: null, new WelcomeNotification {
-                UserId = user.UserId,
-                UserName = user.UserName
-            }, delay: 1 /* TODO: only here b/c of the $connect race condition */);
-
-            // fetch all channels the user is subscribed to
-            var subscriptions = await _dataTable.GetUserSubscriptionsAsync(user.UserId);
-            var users = new Dictionary<string, UserRecord>();
-            foreach(var subscription in subscriptions) {
-
-                // fetch all messages the user may have missed since last time they were connected
-                var messages = await _dataTable.GetChannelMessagesAsync(subscription.ChannelId, subscription.LastSeenTimestamp);
-                foreach(var message in messages) {
-                    if(!users.TryGetValue(message.UserId, out var messageUser)) {
-                        messageUser = await _dataTable.GetUserAsync(message.UserId);
-                        users.Add(message.UserId, messageUser);
-                    }
-
-                    // notify user about missed messages
-                    await NotifyAsync(user.UserId, channelId: null, new UserMessageChangedNotification {
-                        UserId = message.UserId,
-                        UserName = messageUser.UserName,
-                        ChannelId = message.ChannelId,
-                        Text = message.Message,
-                        Timestamp = message.Timestamp
-                    }, delay: 1 /* TODO: only here b/c of the $connect race condition */);
-                }
-            }
         }
 
+        // [Route("$disconnect")]
         public async Task CloseConnectionAsync(APIGatewayProxyRequest request) {
             LogInfo($"Disconnected: {request.RequestContext.ConnectionId}");
 
@@ -135,15 +121,60 @@ namespace LambdaSharp.Chat.ChatFunction {
             await _dataTable.DeleteConnectionAsync(CurrentRequest.RequestContext.ConnectionId, user.UserId);
         }
 
-        public async Task SendMessageAsync(SendMessageRequest request) {
+        // [Route("hello")]
+        public async Task<WelcomeNotification> HelloAsync(HelloRequest request) {
 
-            // NOTE: this method is invoked by messages with the "send" route key
+            // fetch the user record associated with this connection id
+            var user = await GetUserFromConnectionId(CurrentRequest.RequestContext.ConnectionId);
+            if(user == null) {
+                throw new Exception("Unknown user");
+            }
+
+            // fetch all channels the user is subscribed to
+            var subscriptions = await _dataTable.GetUserSubscriptionsAsync(user.UserId);
+            var welcomeUsers = new Dictionary<string, UserRecord>();
+            var welcomeChannels = new List<ChannelRecord>();
+            var welcomeChannelMessages = new Dictionary<string, IEnumerable<MessageRecord>>();
+            foreach(var subscription in subscriptions) {
+
+                // TODO: lookup channels in batch
+                welcomeChannels.Add(await _dataTable.GetChannelAsync(subscription.ChannelId));
+
+                // fetch all messages the user may have missed since last time they were connected
+                var messages = await _dataTable.GetChannelMessagesAsync(subscription.ChannelId, subscription.LastSeenTimestamp);
+                var channelMessages = new List<MessageRecord>();
+                foreach(var message in messages) {
+                    channelMessages.Add(message);
+
+                    // TODO: lookup users in batch
+                    if(!welcomeUsers.TryGetValue(message.UserId, out var messageUser)) {
+                        messageUser = await _dataTable.GetUserAsync(message.UserId);
+                        welcomeUsers.Add(message.UserId, messageUser);
+                    }
+                }
+                welcomeChannelMessages.Add(subscription.ChannelId, channelMessages);
+            }
+
+            // inform new connection about user state
+            return new WelcomeNotification {
+                UserId = user.UserId,
+                UserName = user.UserName,
+                Channels = welcomeChannels.OrderBy(channel => channel.ChannelName.ToLowerInvariant()).ToList(),
+                Users = welcomeUsers.Values.ToList(),
+                ChannelMessages = welcomeChannelMessages
+            };
+        }
+
+        // [Route("send")]
+        public async Task SendMessageAsync(SendMessageRequest request) {
 
             // fetch the user record associated with this connection id
             var user = await GetUserFromConnectionId(CurrentRequest.RequestContext.ConnectionId);
             if(user == null) {
                 return;
             }
+
+            // TODO: validate that the user is a member of this channel
 
             // store message
             var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -155,7 +186,7 @@ namespace LambdaSharp.Chat.ChatFunction {
             });
 
             // notify all connections about new message
-            await NotifyAsync(userId: null, channelId: request.ChannelId, new UserMessageChangedNotification {
+            await NotifyAsync(userId: null, channelId: request.ChannelId, new UserMessageNotification {
                 UserId = user.UserId,
                 UserName = user.UserName,
                 ChannelId = request.ChannelId,
@@ -164,9 +195,8 @@ namespace LambdaSharp.Chat.ChatFunction {
             });
         }
 
+        // [Route("rename")]
         public async Task RenameUserAsync(RenameUserRequest request) {
-
-            // NOTE: this method is invoked by messages with the "rename" route key
 
             // fetch the user record associated with this connection id
             var user = await GetUserFromConnectionId(CurrentRequest.RequestContext.ConnectionId);

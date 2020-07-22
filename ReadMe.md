@@ -101,6 +101,16 @@ public class SendMessageRequest : AMessageRequest {
 }
 ```
 
+Sample Payload
+
+```json
+{
+  "Action": "send",
+  "ChannelId": "General",
+  "Text": "Hello world!"
+}
+```
+
 ## User Interface Flow
 
 1. Show splash screen in `index.html`
@@ -202,6 +212,23 @@ The message record is created for each message sent by a user on a channel. The 
 |Message      |String
 |Jitter       |String
 
+## Chat Protocol
+
+### Requests
+
+|Name                 |Description
+|---------------------|-----------------------
+|Hello                |Announce joining the chat application
+|RenameUser           |Change the current user name
+|SendMessage          |Send a message on a chat channel
+
+### Notifications
+
+|Name                 |Description
+|---------------------|-----------------------
+|JoinedChannel        |Received by subscribers of a channel when a user joins
+|UserNameChanged      |Received by all clients when a user changes their name
+|Welcome              |Received in response to _Hello_ request
 
 ## Future Improvements
 - [x] Allow users to rename themselves.
@@ -229,6 +256,7 @@ The message record is created for each message sent by a user on a channel. The 
 - [ ] Create a "Website" group in module to encapsulate the S3 bucket, the CloudFront distribution, the cache invalidation Lambda function.
 - [ ] Add diagram for data record relationships.
 - [ ] Describe message protocol between front-end and back-end.
+- [ ] Define WebSocket sub-protocol
 
 ## Contributors
 

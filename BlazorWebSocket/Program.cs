@@ -35,7 +35,9 @@ namespace BlazorWebSocket {
             builder.RootComponents.Add<App>("app");
 
             // add HttpClient singleton configured with base address
-            var http = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
+            var http = new HttpClient {
+                BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
+            };
             builder.Services.AddSingleton(_ => http);
 
             // add Cognito User Pool settings by reading config file from S3 bucket

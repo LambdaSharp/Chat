@@ -15,6 +15,7 @@
 # limitations under the License.
 
 Module: LambdaSharp.Chat
+Description: LambdaSharp Serverless Chat App
 Pragmas:
   - Overrides:
       Module::WebSocket.RouteSelectionExpression: $request.body.Action
@@ -75,6 +76,9 @@ Items:
 
       - WebSocket: $disconnect
         Invoke: CloseConnection
+
+      - WebSocket: hello
+        Invoke : Hello
 
       - WebSocket: send
         Invoke: SendMessage
