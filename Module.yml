@@ -15,7 +15,7 @@
 # limitations under the License.
 
 Module: LambdaSharp.Chat
-Description: LambdaSharp Serverless Chat Relay
+Description: LambdaSharp Serverless Chat App
 Pragmas:
   - Overrides:
       Module::WebSocket.RouteSelectionExpression: $request.body.Action

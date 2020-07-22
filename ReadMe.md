@@ -218,9 +218,9 @@ The message record is created for each message sent by a user on a channel. The 
 
 |Name                 |Description
 |---------------------|-----------------------
-|CreateChannel        |Create a new channel and join it
 |RenameUser           |Change the current user name
 |SendMessage          |Send a message on a chat channel
+|Hello                |Announce joining the chat application
 
 ### Notifications
 
@@ -228,7 +228,7 @@ The message record is created for each message sent by a user on a channel. The 
 |---------------------|-----------------------
 |JoinedChannel        |Received by subscribers of a channel when a user joins
 |UserNameChanged      |Received by all clients when a user changes their name
-|Welcome              |Received by each client when they first connect
+|Welcome              |Received in response to _Hello_ request
 
 ## Future Improvements
 - [x] Allow users to rename themselves.
