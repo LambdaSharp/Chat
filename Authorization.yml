@@ -65,7 +65,6 @@
       ClientId: !Ref Authorization::ClientId
       RedirectUri: !Ref WebsiteLoginUrl
       UserPoolUri: !Ref Authorization::UserPoolUri
-      Foo: bar
 
 # WebSocket Authorization
 - Resource: JwtAuthorizer
