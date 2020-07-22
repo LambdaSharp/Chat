@@ -218,9 +218,9 @@ The message record is created for each message sent by a user on a channel. The 
 
 |Name                 |Description
 |---------------------|-----------------------
+|Hello                |Announce joining the chat application
 |RenameUser           |Change the current user name
 |SendMessage          |Send a message on a chat channel
-|Hello                |Announce joining the chat application
 
 ### Notifications
 
