@@ -30,6 +30,11 @@ Items:
       CorsOrigin: !Sub "https://${WebsiteCloudFront.DomainName}"
     Bucket:
       CloudFrontOriginAccessIdentity: !Ref WebsiteCloudFrontIdentity
+    AppSettings:
+      Cognito:
+        ClientId: !Ref Authorization::ClientId
+        RedirectUri: !Ref WebsiteLoginUrl
+        UserPoolUri: !Ref Authorization::UserPoolUri
 
   # Connection Table
   - Resource: DataTable

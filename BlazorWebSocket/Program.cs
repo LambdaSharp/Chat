@@ -24,6 +24,7 @@ using Blazored.LocalStorage;
 using BlazorWebSocket.Common;
 using LambdaSharp.App;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BlazorWebSocket {
@@ -35,18 +36,15 @@ namespace BlazorWebSocket {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
             builder.RootComponents.Add<App>("app");
 
-            // add HttpClient singleton configured with base address
-            var http = new HttpClient {
-                BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
-            };
-            builder.Services.AddSingleton(_ => http);
-
-            // add Cognito User Pool settings by reading config file from S3 bucket
-            var cognito = await http.GetFromJsonAsync<CognitoSettings>("cognito.json");
-            builder.Services.AddSingleton(_ => cognito);
-
             // initialize LambdaSharp dependencies
             builder.AddLambdaSharp<Program>();
+
+            // register cognito configuration
+            builder.Services.AddSingleton(sp => {
+                var config = new CognitoSettings();
+                builder.Configuration.GetSection("Cognito").Bind(config);
+                return config;
+            });
 
             // enable access to browser local storage
             builder.Services.AddBlazoredLocalStorage();

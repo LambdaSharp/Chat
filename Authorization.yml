@@ -56,16 +56,6 @@
 - Variable: UserPoolUri
   Value: !Sub "https://${Authorization::UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com"
 
-- Resource: ConfigDocument
-  Type: LambdaSharp::S3::WriteJson
-  Properties:
-    Bucket: !Ref BlazorWebSocket::BucketArn
-    Key: cognito.json
-    Contents:
-      ClientId: !Ref Authorization::ClientId
-      RedirectUri: !Ref WebsiteLoginUrl
-      UserPoolUri: !Ref Authorization::UserPoolUri
-
 # WebSocket Authorization
 - Resource: JwtAuthorizer
   Type: AWS::ApiGatewayV2::Authorizer
