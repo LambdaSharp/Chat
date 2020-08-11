@@ -113,7 +113,6 @@ Items:
 
   # Create CloudFront distribution mapped to S3 bucket and WebSocket APIGateway
   - Resource: WebsiteCloudFront
-    DependsOn: BlazorWebSocket::Bucket
     Description: CloudFront distribution for https:// web access to the S3 bucket
     Type: AWS::CloudFront::Distribution
     Scope: InvalidateCloudFrontFunction
@@ -130,7 +129,7 @@ Items:
         PriceClass: PriceClass_100
         Origins:
           - Id: S3Origin
-            DomainName: !Ref BlazorWebSocket::BucketDomainName
+            DomainName: !GetAtt BlazorWebSocket::Bucket.Outputs.DomainName
             S3OriginConfig:
               OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${WebsiteCloudFrontIdentity}"
 
@@ -141,7 +140,7 @@ Items:
               OriginProtocolPolicy: https-only
 
         DefaultCacheBehavior:
-          AllowedMethods: [ "GET", "HEAD" ]
+          AllowedMethods: [ GET, HEAD ]
           Compress: true
           DefaultTTL: 2592000 # 30 days
           TargetOriginId: S3Origin
@@ -154,7 +153,7 @@ Items:
         CacheBehaviors:
           - TargetOriginId: WebSocket
             PathPattern: !Ref Module::WebSocket::StageName
-            AllowedMethods: [ "GET", "HEAD" ]
+            AllowedMethods: [ GET, HEAD ]
             ForwardedValues:
               QueryString: true
               Headers:
@@ -177,13 +176,15 @@ Items:
     Memory: 256
     Timeout: 30
     Sources:
-      - S3: !Ref BlazorWebSocket::BucketArn
+      - S3: !GetAtt BlazorWebSocket::Bucket.Outputs.Arn
         Events:
           - s3:ObjectCreated:*
           - s3:ObjectRemoved:*
 
-  # Cognito User Pool Information (TODO: don't use hardcoded values! this information should come from the Blazor app)
+  # Cognito User Pool Information
   - Variable: WebsiteLoginUrl
+
+    # TODO: don't use hardcoded values! this information should come from the Blazor app
     Value: !Sub "https://${WebsiteCloudFront.DomainName}/login"
 
   - Group: Authorization
