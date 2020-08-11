@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Amazon.CloudFront;
@@ -46,14 +47,11 @@ namespace LambdaSharp.Chat.InvalidateCloudFrontFunction {
             // convert S3 keys to CloudFront paths for affected objects
             var paths = request.Records.Select(record => "/" + record.S3.Object.Key).ToList();
 
-            // use Amazon Request ID from first record to uniquely identify the invalidation request
-            var callerReference = request.Records.First().ResponseElements.XAmzRequestId;
-
             // batch invalidate CloudFront paths
             await _cloudfrontClient.CreateInvalidationAsync(new CreateInvalidationRequest {
                 DistributionId = _cloudfrontDistributionId,
                 InvalidationBatch = new InvalidationBatch {
-                    CallerReference = callerReference,
+                    CallerReference = Guid.NewGuid().ToString(),
                     Paths = new Paths {
                         Items = paths,
                         Quantity = paths.Count
