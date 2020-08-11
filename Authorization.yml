@@ -59,7 +59,7 @@
 - Resource: ConfigDocument
   Type: LambdaSharp::S3::WriteJson
   Properties:
-    Bucket: !Ref WebsiteBucket
+    Bucket: !Ref BlazorWebSocket::BucketArn
     Key: cognito.json
     Contents:
       ClientId: !Ref Authorization::ClientId

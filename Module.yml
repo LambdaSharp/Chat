@@ -24,6 +24,13 @@ Using:
   - Module: LambdaSharp.S3.IO@lambdasharp
 Items:
 
+  # Blazor WebAssembly App
+  - App: BlazorWebSocket
+    Api:
+      CorsOrigin: !Sub "https://${WebsiteCloudFront.DomainName}"
+    Bucket:
+      CloudFrontOriginAccessIdentity: !Ref WebsiteCloudFrontIdentity
+
   # Connection Table
   - Resource: DataTable
     Scope: all
@@ -99,46 +106,9 @@ Items:
     Type: AWS::SQS::Queue
     Allow: Send,Receive
 
-  # Bucket to host website
-  - Resource: WebsiteBucket
-    Description: S3 bucket for hosting website assets
-    Type: AWS::S3::Bucket
-
-  - Resource: WebsiteBucketPolicy
-    Description: CloudFront-only access policy
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      PolicyDocument:
-        Id: WebsiteBucket
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowCloudFrontAccess
-            Effect: Allow
-            Principal:
-              AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${WebsiteCloudFrontIdentity}"
-            Action: s3:GetObject
-            Resource: !Sub "${WebsiteBucket.Arn}/*"
-      Bucket: !Ref WebsiteBucket
-    DependsOn: DeployWebsiteFiles
-
-  # Publish Blazor WebAssembly app into a folder and compress into a zip package
-  - Package: WebsiteFiles
-    Build: dotnet publish -c Release BlazorWebSocket -p:BlazorEnableCompression=false
-    Files: BlazorWebSocket/bin/Release/netstandard2.1/publish/wwwroot/
-
-  # Copy Blazor WebAssembly files to S3 bucket with Brotli encoding
-  - Resource: DeployWebsiteFiles
-    Type: LambdaSharp::S3::Unzip
-    Properties:
-      SourceBucket: !Ref DeploymentBucketName
-      SourceKey: !Ref WebsiteFiles
-      DestinationBucket: !Ref WebsiteBucket
-      DestinationKey: ""
-      Encoding: BROTLI
-
   # Create CloudFront distribution mapped to S3 bucket and WebSocket APIGateway
   - Resource: WebsiteCloudFront
-    DependsOn: WebsiteBucketPolicy
+    DependsOn: BlazorWebSocket::Bucket
     Description: CloudFront distribution for https:// web access to the S3 bucket
     Type: AWS::CloudFront::Distribution
     Scope: InvalidateCloudFrontFunction
@@ -155,7 +125,7 @@ Items:
         PriceClass: PriceClass_100
         Origins:
           - Id: S3Origin
-            DomainName: !GetAtt WebsiteBucket.DomainName
+            DomainName: !Ref BlazorWebSocket::BucketDomainName
             S3OriginConfig:
               OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${WebsiteCloudFrontIdentity}"
 
@@ -202,7 +172,7 @@ Items:
     Memory: 256
     Timeout: 30
     Sources:
-      - S3: WebsiteBucket
+      - S3: !Ref BlazorWebSocket::BucketArn
         Events:
           - s3:ObjectCreated:*
           - s3:ObjectRemoved:*
