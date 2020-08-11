@@ -40,11 +40,9 @@ namespace BlazorWebSocket {
             builder.AddLambdaSharp<Program>();
 
             // register cognito configuration
-            builder.Services.AddSingleton(sp => {
-                var config = new CognitoSettings();
-                builder.Configuration.GetSection("Cognito").Bind(config);
-                return config;
-            });
+            builder.Services.AddSingleton(_ =>
+                builder.Configuration.GetSection("Cognito").Get<CognitoSettings>()
+            );
 
             // enable access to browser local storage
             builder.Services.AddBlazoredLocalStorage();
