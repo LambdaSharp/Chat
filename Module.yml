@@ -27,9 +27,12 @@ Items:
   # Blazor WebAssembly App
   - App: BlazorWebSocket
     Api:
-      CorsOrigin: !Sub "https://${WebsiteCloudFront.DomainName}"
+      # NOTE (2020-08-13, bjorg): cannot use `!Sub "https://${WebsiteCloudFront.DomainName}"` because it introduces a circular dependency
+      CorsOrigin: "*"
     Bucket:
       CloudFrontOriginAccessIdentity: !Ref WebsiteCloudFrontIdentity
+    Client:
+      ApiUrl: !Sub "https://${WebsiteCloudFront.DomainName}/${BlazorWebSocket::Api.Outputs.Root}"
     AppSettings:
       Cognito:
         ClientId: !Ref Authorization::ClientId
@@ -118,7 +121,7 @@ Items:
     Scope: InvalidateCloudFrontFunction
     Properties:
       DistributionConfig:
-        Comment: !Sub "CloudFront Distribution for WebChat app (${AWS::StackName})"
+        Comment: !Sub "CloudFront Distribution for LambdaSharp.Chat app (${AWS::StackName})"
         Enabled: true
         HttpVersion: http2
         CustomErrorResponses:
@@ -135,6 +138,13 @@ Items:
 
           - Id: WebSocket
             DomainName: !Ref Module::WebSocket::DomainName
+            CustomOriginConfig:
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+
+          - Id: AppApi
+            DomainName: !GetAtt BlazorWebSocket::Api.Outputs.DomainName
+            OriginPath: !GetAtt  BlazorWebSocket::Api.Outputs.CloudFrontOriginPath
             CustomOriginConfig:
               HTTPSPort: 443
               OriginProtocolPolicy: https-only
@@ -158,6 +168,15 @@ Items:
               QueryString: true
               Headers:
                 - Authorization
+            ViewerProtocolPolicy: https-only
+
+          - TargetOriginId: AppApi
+            PathPattern: !GetAtt BlazorWebSocket::Api.Outputs.CloudFrontPathPattern
+            AllowedMethods: [ GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE  ]
+            ForwardedValues:
+              QueryString: false
+              Headers:
+                - X-Api-Key
             ViewerProtocolPolicy: https-only
 
   - Resource: WebsiteCloudFrontPermissions
