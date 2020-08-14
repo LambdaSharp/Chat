@@ -32,7 +32,7 @@ Items:
     Bucket:
       CloudFrontOriginAccessIdentity: !Ref WebsiteCloudFrontIdentity
     Client:
-      ApiUrl: !Sub "https://${WebsiteCloudFront.DomainName}/${BlazorWebSocket::Api.Outputs.Root}"
+      ApiUrl: !Sub "https://${WebsiteCloudFront.DomainName}/${BlazorWebSocket::Api.Outputs.RootPath}"
     AppSettings:
       Cognito:
         ClientId: !Ref Authorization::ClientId
