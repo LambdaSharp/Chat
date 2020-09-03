@@ -19,11 +19,12 @@
 using System;
 using System.Threading.Tasks;
 using Blazored.LocalStorage;
+using LambdaSharp.App;
 using Microsoft.AspNetCore.Components;
 
 namespace BlazorWebSocket.Common {
 
-    public abstract class ComponentWithLocalStorageBase : ComponentBase {
+    public abstract class AComponentWithLocalStorageBase : ALambdaComponent {
 
         //--- Properties ---
         [Inject] protected ILocalStorageService LocalStorage { get; set; }

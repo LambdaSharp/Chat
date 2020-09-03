@@ -26,7 +26,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace BlazorWebSocket.Pages {
 
-    public class LoginBase : ComponentWithLocalStorageBase {
+    public class LoginBase : AComponentWithLocalStorageBase {
 
         //--- Properties ---
         protected string LoginUrl { get; set; }
