@@ -25,11 +25,12 @@ using BlazorWebSocket.Common;
 using LambdaSharp.Chat.Common.Notifications;
 using LambdaSharp.Chat.Common.Records;
 using LambdaSharp.Chat.Common.Requests;
+using LambdaSharp.Logging.Metrics;
 using Microsoft.AspNetCore.Components;
 
 namespace BlazorWebSocket.Pages {
 
-    public class IndexBase : ComponentWithLocalStorageBase, IDisposable {
+    public class IndexBase : AComponentWithLocalStorageBase, IDisposable {
 
         //--- Constants ---
         private const int TOKEN_EXPIRATION_LIMIT_SECONDS = 5 * 60;
@@ -71,23 +72,23 @@ namespace BlazorWebSocket.Pages {
             if(authenticationTokens == null) {
                 var guard = await CreateReplayGuardAsync();
                 LoginUrl = CognitoSettings.GetLoginUrl(guard);
-                Console.WriteLine($"Login URL: {LoginUrl}");
+                LogInfo($"Login URL: {LoginUrl}");
                 State = ConnectionState.Unauthorized;
             } else {
-                Console.WriteLine("Attempting to connect to websocket");
+                LogInfo("Attempting to connect to websocket");
                 State = ConnectionState.Connecting;
 
                 // attempt to connect to the websocket
                 WebSocketDispatcher.IdToken = authenticationTokens.IdToken;
                 if(await WebSocketDispatcher.Connect()) {
-                    Console.WriteLine("Websocket connection succeeded");
+                    LogInfo("Websocket connection succeeded");
                     await WebSocketDispatcher.SendMessageAsync(new HelloRequest());
                 } else {
-                    Console.WriteLine("Websocket connection failed");
+                    LogInfo("Websocket connection failed");
                     await ClearAuthenticationTokens();
                     var guard = await CreateReplayGuardAsync();
                     LoginUrl = CognitoSettings.GetLoginUrl(guard);
-                    Console.WriteLine($"Login URL: {LoginUrl}");
+                    LogInfo($"Login URL: {LoginUrl}");
                     State = ConnectionState.Unauthorized;
                 }
 
@@ -101,6 +102,7 @@ namespace BlazorWebSocket.Pages {
                 Text = ChatMessage
             });
             ChatMessage = "";
+            LogMetric("Action.SendMessage", 1.0, LambdaMetricUnit.Count);
         }
 
         protected async Task RenameUserAsync() {
@@ -110,7 +112,7 @@ namespace BlazorWebSocket.Pages {
         }
 
         private void ReceivedMessage(UserMessageNotification message) {
-            Console.WriteLine($"Received UserMessage: UserId={message.UserId}, UserName={message.UserName}, ChannelId={message.ChannelId}, Text='{message.Text}', Timestamp={message.Timestamp}");
+            LogInfo($"Received UserMessage: UserId={message.UserId}, UserName={message.UserName}, ChannelId={message.ChannelId}, Text='{message.Text}', Timestamp={message.Timestamp}");
 
             // add message to message list
             Messages.Add(message);
@@ -120,7 +122,7 @@ namespace BlazorWebSocket.Pages {
         }
 
         private void ReceivedUserNameChanged(UserNameChangedNotification username) {
-            Console.WriteLine($"Received UserNameChanged: UserId={username.UserId}, UserName={username.UserName}, OldUserName={username.OldUserName}");
+            LogInfo($"Received UserNameChanged: UserId={username.UserId}, UserName={username.UserName}, OldUserName={username.OldUserName}");
 
             // check if user name change notification is about us or somebody else
             if(username.UserId == UserId) {
@@ -141,7 +143,7 @@ namespace BlazorWebSocket.Pages {
         }
 
         private async Task ReceivedWelcomeAsync(WelcomeNotification welcome) {
-            Console.WriteLine($"Received Welcome: UserId={welcome.UserId}, UserName={welcome.UserName}");
+            LogInfo($"Received Welcome: UserId={welcome.UserId}, UserName={welcome.UserName}");
 
             // update application state
             UserId = welcome.UserId;
@@ -172,7 +174,7 @@ namespace BlazorWebSocket.Pages {
         }
 
         private void ReceivedJoinedChannel(JoinedChannelNotification joined) {
-            Console.WriteLine($"Received JoinedChannel: UserId={joined.UserId}, UserName={joined.UserName}, ChannelId={joined.ChannelId}");
+            LogInfo($"Received JoinedChannel: UserId={joined.UserId}, UserName={joined.UserName}, ChannelId={joined.ChannelId}");
 
             // show message about renamed user
             Messages.Add(new UserMessageNotification {
@@ -190,7 +192,7 @@ namespace BlazorWebSocket.Pages {
             // check if any authentication tokens are stored
             var authenticationTokens = await LoadTokensAsync();
             if(authenticationTokens == null) {
-                Console.WriteLine($"No authentication tokens found");
+                LogInfo($"No authentication tokens found");
                 return null;
             }
 
@@ -198,37 +200,37 @@ namespace BlazorWebSocket.Pages {
             var authenticationTokenExpiration = DateTimeOffset.FromUnixTimeSeconds(authenticationTokens.Expiration);
             var authenticationTokenTtl = authenticationTokenExpiration - DateTimeOffset.UtcNow;
             if(authenticationTokenTtl < TimeSpan.FromSeconds(TOKEN_EXPIRATION_LIMIT_SECONDS)) {
-                Console.WriteLine($"Current authentication tokens has expired or expires soon: {authenticationTokenExpiration}");
+                LogInfo($"Current authentication tokens has expired or expires soon: {authenticationTokenExpiration}");
 
                 // refresh authentication tokens
-                Console.WriteLine($"Refreshing authentication tokens for code grant: {authenticationTokens.IdToken}");
+                LogInfo($"Refreshing authentication tokens for code grant: {authenticationTokens.IdToken}");
                 var oauth2TokenResponse = await HttpClient.PostAsync($"{CognitoSettings.UserPoolUri}/oauth2/token", new FormUrlEncodedContent(new[] {
                     new KeyValuePair<string, string>("grant_type", "refresh_token"),
                     new KeyValuePair<string, string>("client_id", CognitoSettings.ClientId),
                     new KeyValuePair<string, string>("refresh_token", authenticationTokens.RefreshToken)
                 }));
                 if(!oauth2TokenResponse.IsSuccessStatusCode) {
-                    Console.WriteLine("Authentication tokens refresh failed");
+                    LogInfo("Authentication tokens refresh failed");
                     await ClearAuthenticationTokens();
                     return null;
                 }
 
                 // store authentication tokens in local storage
                 var json = await oauth2TokenResponse.Content.ReadAsStringAsync();
-                Console.WriteLine($"Storing authentication tokens: {json}");
+                LogInfo($"Storing authentication tokens: {json}");
                 var refreshAuthenticationTokens = AuthenticationTokens.FromJson(json);
                 authenticationTokens.IdToken = refreshAuthenticationTokens.IdToken;
                 authenticationTokens.AccessToken = refreshAuthenticationTokens.AccessToken;
                 authenticationTokens.Expiration = refreshAuthenticationTokens.Expiration;
                 await SaveTokensAsync(authenticationTokens);
             } else {
-                Console.WriteLine($"Current authentication tokens valid until: {authenticationTokenExpiration}");
+                LogInfo($"Current authentication tokens valid until: {authenticationTokenExpiration}");
             }
             return authenticationTokens;
         }
 
         private async Task ClearAuthenticationTokens() {
-            Console.WriteLine("Clearing old authentication tokens");
+            LogInfo("Clearing old authentication tokens");
             await ClearTokensAsync();
         }
 

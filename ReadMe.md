@@ -6,7 +6,7 @@
 
 This LambdaSharp module creates a chat application built with [ASP.NET Core Blazor WebAssembly](https://docs.microsoft.com/en-us/aspnet/core/blazor/get-started) for the front-end, [Amazon Cognito](https://aws.amazon.com/cognito/) for user authentication, [API Gateway WebSocket](https://aws.amazon.com/blogs/compute/announcing-websocket-apis-in-amazon-api-gateway/) for communication, [Amazon DynamoDB](https://aws.amazon.com/dynamodb/) for storage using a single-table design, and [AWS Lambda](https://aws.amazon.com/lambda/) for the business logic written in C#. Finally, the application is delivered as as self-contained [AWS CloudFormation](https://aws.amazon.com/cloudformation/) template.
 
-> **NOTE:** This LambdaSharp module requires .NET Core 3.1.300 and LambdaSharp.Tool 0.8.0.5, or later.
+> **NOTE:** This LambdaSharp module requires .NET Core 3.1.300 and LambdaSharp.Tool 0.8.1.0, or later.
 
 ![LambdaSharp.Chat](Assets/LambdaSharpWebChat.png)
 

@@ -24,6 +24,21 @@ Using:
   - Module: LambdaSharp.S3.IO@lambdasharp
 Items:
 
+  # Blazor WebAssembly App
+  - App: BlazorWebSocket
+    Api:
+      # NOTE (2020-08-13, bjorg): cannot use `!Sub "https://${WebsiteCloudFront.DomainName}"` because it introduces a circular dependency
+      CorsOrigin: "*"
+    Bucket:
+      CloudFrontOriginAccessIdentity: !Ref WebsiteCloudFrontIdentity
+    Client:
+      ApiUrl: !Sub "https://${WebsiteCloudFront.DomainName}/${BlazorWebSocket::Api.Outputs.RootPath}"
+    AppSettings:
+      Cognito:
+        ClientId: !Ref Authorization::ClientId
+        RedirectUri: !Ref WebsiteLoginUrl
+        UserPoolUri: !Ref Authorization::UserPoolUri
+
   # Connection Table
   - Resource: DataTable
     Scope: all
@@ -99,52 +114,14 @@ Items:
     Type: AWS::SQS::Queue
     Allow: Send,Receive
 
-  # Bucket to host website
-  - Resource: WebsiteBucket
-    Description: S3 bucket for hosting website assets
-    Type: AWS::S3::Bucket
-
-  - Resource: WebsiteBucketPolicy
-    Description: CloudFront-only access policy
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      PolicyDocument:
-        Id: WebsiteBucket
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowCloudFrontAccess
-            Effect: Allow
-            Principal:
-              AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${WebsiteCloudFrontIdentity}"
-            Action: s3:GetObject
-            Resource: !Sub "${WebsiteBucket.Arn}/*"
-      Bucket: !Ref WebsiteBucket
-    DependsOn: DeployWebsiteFiles
-
-  # Publish Blazor WebAssembly app into a folder and compress into a zip package
-  - Package: WebsiteFiles
-    Build: dotnet publish -c Release BlazorWebSocket -p:BlazorEnableCompression=false
-    Files: BlazorWebSocket/bin/Release/netstandard2.1/publish/wwwroot/
-
-  # Copy Blazor WebAssembly files to S3 bucket with Brotli encoding
-  - Resource: DeployWebsiteFiles
-    Type: LambdaSharp::S3::Unzip
-    Properties:
-      SourceBucket: !Ref DeploymentBucketName
-      SourceKey: !Ref WebsiteFiles
-      DestinationBucket: !Ref WebsiteBucket
-      DestinationKey: ""
-      Encoding: BROTLI
-
   # Create CloudFront distribution mapped to S3 bucket and WebSocket APIGateway
   - Resource: WebsiteCloudFront
-    DependsOn: WebsiteBucketPolicy
     Description: CloudFront distribution for https:// web access to the S3 bucket
     Type: AWS::CloudFront::Distribution
     Scope: InvalidateCloudFrontFunction
     Properties:
       DistributionConfig:
-        Comment: !Sub "CloudFront Distribution for WebChat app (${AWS::StackName})"
+        Comment: !Sub "CloudFront Distribution for LambdaSharp.Chat app (${AWS::StackName})"
         Enabled: true
         HttpVersion: http2
         CustomErrorResponses:
@@ -155,7 +132,7 @@ Items:
         PriceClass: PriceClass_100
         Origins:
           - Id: S3Origin
-            DomainName: !GetAtt WebsiteBucket.DomainName
+            DomainName: !GetAtt BlazorWebSocket::Bucket.Outputs.DomainName
             S3OriginConfig:
               OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${WebsiteCloudFrontIdentity}"
 
@@ -165,8 +142,15 @@ Items:
               HTTPSPort: 443
               OriginProtocolPolicy: https-only
 
+          - Id: AppApi
+            DomainName: !GetAtt BlazorWebSocket::Api.Outputs.DomainName
+            OriginPath: !GetAtt  BlazorWebSocket::Api.Outputs.CloudFrontOriginPath
+            CustomOriginConfig:
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+
         DefaultCacheBehavior:
-          AllowedMethods: [ "GET", "HEAD" ]
+          AllowedMethods: [ GET, HEAD ]
           Compress: true
           DefaultTTL: 2592000 # 30 days
           TargetOriginId: S3Origin
@@ -179,11 +163,20 @@ Items:
         CacheBehaviors:
           - TargetOriginId: WebSocket
             PathPattern: !Ref Module::WebSocket::StageName
-            AllowedMethods: [ "GET", "HEAD" ]
+            AllowedMethods: [ GET, HEAD ]
             ForwardedValues:
               QueryString: true
               Headers:
                 - Authorization
+            ViewerProtocolPolicy: https-only
+
+          - TargetOriginId: AppApi
+            PathPattern: !GetAtt BlazorWebSocket::Api.Outputs.CloudFrontPathPattern
+            AllowedMethods: [ GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE  ]
+            ForwardedValues:
+              QueryString: false
+              Headers:
+                - X-Api-Key
             ViewerProtocolPolicy: https-only
 
   - Resource: WebsiteCloudFrontPermissions
@@ -202,13 +195,15 @@ Items:
     Memory: 256
     Timeout: 30
     Sources:
-      - S3: WebsiteBucket
+      - S3: !GetAtt BlazorWebSocket::Bucket.Outputs.Arn
         Events:
           - s3:ObjectCreated:*
           - s3:ObjectRemoved:*
 
-  # Cognito User Pool Information (TODO: don't use hardcoded values! this information should come from the Blazor app)
+  # Cognito User Pool Information
   - Variable: WebsiteLoginUrl
+
+    # TODO: don't use hardcoded values! this information should come from the Blazor app
     Value: !Sub "https://${WebsiteCloudFront.DomainName}/login"
 
   - Group: Authorization
