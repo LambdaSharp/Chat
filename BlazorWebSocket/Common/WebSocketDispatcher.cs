@@ -79,7 +79,7 @@ namespace BlazorWebSocket.Common {
                 : (_serverUri.Query == "")
                 ? new Uri($"{_serverUri}?id_token={IdToken}")
                 : new Uri($"{_serverUri}&id_token={IdToken}");
-            if(!string.IsNullOrEmpty(IdToken))                 {
+            if(!string.IsNullOrEmpty(IdToken)) {
                 Console.WriteLine($"Using authorization token: {IdToken}");
                 _webSocket.Options.SetRequestHeader("Authorization", $"Bearer {IdToken}");
             } else {
