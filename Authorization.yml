@@ -66,8 +66,7 @@
     AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Authorization::JwtAuthorizerFunction.Arn}/invocations"
     AuthorizerCredentialsArn: !GetAtt Authorization::JwtAuthorizerRole.Arn
     IdentitySource:
-      #- route.request.header.Authorization
-      - route.request.querystring.id_token
+      - route.request.querystring.header
 
 - Resource: JwtAuthorizerRole
   Type: AWS::IAM::Role

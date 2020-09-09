@@ -193,7 +193,7 @@ Items:
   - Function: InvalidateCloudFrontFunction
     Description: Invoked by S3 when files change in the website bucket so they can be invalidated in the CloudFront cache
     Memory: 256
-    Timeout: 30
+    Timeout: 60
     Sources:
       - S3: !GetAtt BlazorWebSocket::Bucket.Outputs.Arn
         Events:
