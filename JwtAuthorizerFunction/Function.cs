@@ -20,14 +20,21 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
-using LambdaSharp;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 
 namespace LambdaSharp.Chat.JwtAuthorizerFunction {
 
     public sealed class Function : ALambdaFunction<AuthorizationRequest, AuthorizationResponse> {
+
+        //--- Types ---
+        public class Header {
+
+            //--- Properties ---
+            public string Authorization { get; set; }
+        }
 
         //--- Fields ---
         private string _issuer;
@@ -116,6 +123,21 @@ namespace LambdaSharp.Chat.JwtAuthorizerFunction {
             string GetAuthorizationToken() {
                 const string AuthorizationHeaderPrefix = "Bearer ";
 
+                // check if 'header' query parameter is set
+                string encodedHeader = null;
+                if(request.QueryStringParameters?.TryGetValue("header", out encodedHeader) ?? false) {
+                    try {
+                        var header = System.Text.Json.JsonSerializer.Deserialize<Header>(Encoding.UTF8.GetString(Convert.FromBase64String(encodedHeader)));
+                        if(header.Authorization != null) {
+                            return header.Authorization.StartsWith(AuthorizationHeaderPrefix)
+                                ? header.Authorization.Substring(AuthorizationHeaderPrefix.Length).Trim()
+                                : null;
+                        }
+                    } catch(Exception e) {
+                        LogErrorAsInfo(e, "unable to decode header query parameter");
+                    }
+                }
+
                 // convert headers to be case-insensitive
                 var headers = new Dictionary<string, string>(request.Headers, StringComparer.InvariantCultureIgnoreCase);
 
@@ -127,12 +149,6 @@ namespace LambdaSharp.Chat.JwtAuthorizerFunction {
 
                     // not a valid 'Authorization' header value
                     return null;
-                }
-
-                // check if 'id_token' query parameter is set
-                string authorizationParameter = null;
-                if(request.QueryStringParameters?.TryGetValue("id_token", out authorizationParameter) ?? false) {
-                    return authorizationParameter;
                 }
                 return null;
             }

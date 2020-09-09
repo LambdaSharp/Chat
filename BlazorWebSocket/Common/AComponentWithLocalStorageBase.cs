@@ -37,7 +37,7 @@ namespace BlazorWebSocket.Common {
         protected Task ClearTokensAsync() => LocalStorage.RemoveItemAsync("Tokens");
 
         protected async Task<string> CreateReplayGuardAsync() {
-            var state = new Guid().ToString();
+            var state = Guid.NewGuid().ToString();
             await SaveAsync("AuthenticationGuard", state);
             return state;
         }

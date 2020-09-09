@@ -74,16 +74,18 @@ namespace BlazorWebSocket.Common {
         private async Task ReconnectWebSocketAsync() {
 
             // build effective server uri
-            var effectiveServerUri = string.IsNullOrEmpty(IdToken)
-                ? _serverUri
-                : (_serverUri.Query == "")
-                ? new Uri($"{_serverUri}?id_token={IdToken}")
-                : new Uri($"{_serverUri}&id_token={IdToken}");
+            Uri effectiveServerUri;
             if(!string.IsNullOrEmpty(IdToken)) {
                 Console.WriteLine($"Using authorization token: {IdToken}");
-                _webSocket.Options.SetRequestHeader("Authorization", $"Bearer {IdToken}");
+                var header = Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new {
+                    Authorization = $"Bearer {IdToken}"
+                })));
+                effectiveServerUri = string.IsNullOrEmpty(_serverUri.Query)
+                    ? new Uri($"{_serverUri}?header={header}")
+                    : new Uri($"{_serverUri}&header={header}");
             } else {
                 Console.WriteLine("No authorization token provided");
+                effectiveServerUri = _serverUri;
             }
             Console.WriteLine($"Connecting to: {effectiveServerUri}");
 
