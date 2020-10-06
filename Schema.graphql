@@ -1,0 +1,41 @@
+type User {
+    UserId: String!
+    UserName: String!
+}
+
+type Welcome {
+    UserId: String!
+    UserName: String!
+    Users: [ User! ]
+    Channels: [ Channel! ]
+}
+
+type Message {
+    ChannelId: String!
+    UserId: String!
+    Timestamp: Long!
+    Message: String!
+    Jitter: String!
+}
+
+type Channel {
+    ChannelId: String!
+    ChannelName: String!
+}
+
+type Query {
+    AllChannels(): [ Channel! ]
+    AllMessagesSince(channelId: String!, timestamp: Long!): [ Message! ]
+    AllChannelUsers(channelId: String!): [ User! ]
+}
+
+type Mutation {
+    Hello(): Welcome
+    SendMessage(channelId: String!, message: String!): Message
+    RenameUser(userName: String!): User
+}
+
+schema {
+    query: Query
+    mutation: Mutation
+}

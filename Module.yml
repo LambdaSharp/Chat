@@ -209,6 +209,10 @@ Items:
   - Group: Authorization
     Items: !Include Authorization.yml
 
+  # AppSync GraphQL Definition
+  - Group: AppSync
+    Items: !Include AppSync.yml
+
   # Initialize DataTable with minimal records
   - Function: Finalizer
     Description: Initialize DynamoDB table with default rows

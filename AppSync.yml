@@ -1,0 +1,58 @@
+- Resource: Api
+  Type: AWS::AppSync::GraphQLApi
+  Properties:
+    Name: !Sub "${Module::Id}-Api"
+    Authentication: AMAZON_COGNITO_USER_POOLS
+    UserPoolConfig:
+      AppIdClientRegex: !Ref Authorization::ClientId
+      AwsRegion: !Ref AWS::Region
+      DefaultAction: DENY
+      UserPoolId: !Ref Authorization::UserPool
+    XrayEnabled: !If [ XRayIsEnabled, true, false ]
+
+- Resource: DataTableSource
+  Type: AWS::AppSync::DataSource
+  Properties:
+    ApiId: !GetAtt AppSync::Api.ApiId
+    Name: !Sub "${Module::Id}-DataTable"
+    Description: Chat DynamoDB table
+    Type: AMAZON_DYNAMODB
+    ServiceRoleArn: !GetAtt AppSync::Role.Arn
+    DynamoDBConfig:
+      AwsRegion: !Ref AWS::Region
+      TableName: !Ref DataTable
+
+- Resource: Role
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - appsync.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    Policies:
+      - PolicyName: DynamoDB-ReadWrite
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DeleteItem
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+                - dynamodb:Scan
+                - dynamodb:UpdateItem
+              Resource:
+                - !Sub "${DataTable.Arn}"
+                - !Sub "${DataTable.Arn}/*"
+
+- Resource: Schema
+  Type: AWS::AppSync::GraphQLSchema
+  Properties:
+    ApiId: !GetAtt AppSync::Api.ApiId
+    Definition: !Include Chat.graphql
