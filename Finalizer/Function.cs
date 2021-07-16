@@ -4,6 +4,7 @@ using LambdaSharp.Chat.Common.DataStore;
 using LambdaSharp.Chat.Common.Records;
 using LambdaSharp;
 using LambdaSharp.Finalizer;
+using System.Threading;
 
 namespace LambdaSharp.Chat.Finalizer {
 
@@ -22,11 +23,11 @@ namespace LambdaSharp.Chat.Finalizer {
             _dataTable = new DataTable(dataTableName, new AmazonDynamoDBClient());
         }
 
-        public override Task CreateDeployment(FinalizerProperties current) {
+        public override Task CreateDeploymentAsync(FinalizerProperties current, CancellationToken cancellationToken) {
             return CreateGeneralChannelAsync();
         }
 
-        public override Task UpdateDeployment(FinalizerProperties next, FinalizerProperties previous) {
+        public override Task UpdateDeploymentAsync(FinalizerProperties next, FinalizerProperties previous, CancellationToken cancellationToken) {
             return CreateGeneralChannelAsync();
         }
 

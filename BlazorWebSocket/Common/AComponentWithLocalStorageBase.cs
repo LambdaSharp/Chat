@@ -30,11 +30,11 @@ namespace BlazorWebSocket.Common {
         [Inject] protected ILocalStorageService LocalStorage { get; set; }
 
         //--- Methods ---
-        protected Task SaveAsync<T>(string name, T item) => LocalStorage.SetItemAsync(name, item);
-        protected Task<T> LoadAsync<T>(string name) => LocalStorage.GetItemAsync<T>(name);
-        protected Task SaveTokensAsync(AuthenticationTokens tokens) => SaveAsync("Tokens", tokens);
-        protected Task<AuthenticationTokens> LoadTokensAsync() => LoadAsync<AuthenticationTokens>("Tokens");
-        protected Task ClearTokensAsync() => LocalStorage.RemoveItemAsync("Tokens");
+        protected ValueTask SaveAsync<T>(string name, T item) => LocalStorage.SetItemAsync(name, item);
+        protected ValueTask<T> LoadAsync<T>(string name) => LocalStorage.GetItemAsync<T>(name);
+        protected ValueTask SaveTokensAsync(AuthenticationTokens tokens) => SaveAsync("Tokens", tokens);
+        protected ValueTask<AuthenticationTokens> LoadTokensAsync() => LoadAsync<AuthenticationTokens>("Tokens");
+        protected ValueTask ClearTokensAsync() => LocalStorage.RemoveItemAsync("Tokens");
 
         protected async Task<string> CreateReplayGuardAsync() {
             var state = Guid.NewGuid().ToString();

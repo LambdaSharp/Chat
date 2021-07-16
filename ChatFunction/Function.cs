@@ -41,6 +41,9 @@ namespace LambdaSharp.Chat.ChatFunction {
         private string _notifyQueueUrl;
         private IAmazonSQS _sqsClient;
 
+        //--- Constructors ---
+        public Function() : base(new LambdaSharp.Serialization.LambdaSystemTextJsonSerializer()) { }
+
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
 
