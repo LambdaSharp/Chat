@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+using System.Text.Json.Serialization;
 using Amazon.Lambda.APIGatewayEvents;
-using Newtonsoft.Json;
 
 namespace LambdaSharp.Chat.JwtAuthorizerFunction {
 
@@ -25,7 +25,7 @@ namespace LambdaSharp.Chat.JwtAuthorizerFunction {
 
         //--- Properties ---
 
-        [JsonProperty("methodArn")]
+        [JsonPropertyName("methodArn")]
         public string MethodArn { get; set; }
     }
 }

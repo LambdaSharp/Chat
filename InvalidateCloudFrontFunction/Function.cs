@@ -32,6 +32,9 @@ namespace LambdaSharp.Chat.InvalidateCloudFrontFunction {
         private IAmazonCloudFront _cloudfrontClient;
         private string _cloudfrontDistributionId;
 
+        //--- Constructors ---
+        public Function() : base(new LambdaSharp.Serialization.LambdaSystemTextJsonSerializer()) { }
+
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
 

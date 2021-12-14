@@ -17,7 +17,7 @@
  */
 
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace LambdaSharp.Chat.JwtAuthorizerFunction {
 
@@ -25,13 +25,13 @@ namespace LambdaSharp.Chat.JwtAuthorizerFunction {
 
         //--- Properties ---
 
-        [JsonProperty("principalId")]
+        [JsonPropertyName("principalId")]
         public string PrincipalId { get; set; }
 
-        [JsonProperty("policyDocument")]
+        [JsonPropertyName("policyDocument")]
         public PolicyDocument PolicyDocument { get; set; }
 
-        [JsonProperty("context")]
+        [JsonPropertyName("context")]
         public Dictionary<string, string> Context { get; set; }
     }
 

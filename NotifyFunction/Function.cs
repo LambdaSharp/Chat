@@ -38,6 +38,9 @@ namespace LambdaSharp.Chat.NotifyFunction {
         private IAmazonApiGatewayManagementApi _amaClient;
         private DataTable _dataTable;
 
+        //--- Constructors ---
+        public Function() : base(new LambdaSharp.Serialization.LambdaSystemTextJsonSerializer()) { }
+
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
 

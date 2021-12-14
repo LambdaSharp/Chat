@@ -21,9 +21,9 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
 
 namespace LambdaSharp.Chat.JwtAuthorizerFunction {
 
@@ -41,6 +41,9 @@ namespace LambdaSharp.Chat.JwtAuthorizerFunction {
         private string _audience;
         private bool _enabled;
         private JsonWebKeySet _issuerJsonWebKeySet;
+
+        //--- Constructors ---
+        public Function() : base(new LambdaSharp.Serialization.LambdaSystemTextJsonSerializer()) { }
 
         //--- Methods ---
         public override async Task InitializeAsync(LambdaConfig config) {
@@ -75,7 +78,7 @@ namespace LambdaSharp.Chat.JwtAuthorizerFunction {
                         .ReadJwtToken(authorization)
                         .Claims
                         .ToDictionary(claim => claim.Type, claim => claim.Value);
-                    LogInfo($"JWT Claims: {JsonConvert.SerializeObject(claims)}");
+                    LogInfo($"JWT Claims: {JsonSerializer.Serialize(claims)}");
 
                     // validate JWT value
                     LogInfo($"Validating JWT");
