@@ -21,7 +21,6 @@ using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.SQS;
-using LambdaSharp;
 using LambdaSharp.ApiGateway;
 using LambdaSharp.Chat.Common;
 using LambdaSharp.Chat.Common.Records;
@@ -62,8 +61,8 @@ namespace LambdaSharp.Chat.ChatFunction {
 
             // get the user id from the authorizer metadata
             request.RequestContext.Authorizer.TryGetValue("sub", out var subject);
-            var userId = subject as string;
-            if(userId == null) {
+            var userId = subject?.ToString();
+            if(userId is null) {
 
                 // TODO: improve exception
                 throw new Exception("Unauthenticated access detected");
@@ -78,13 +77,13 @@ namespace LambdaSharp.Chat.ChatFunction {
 
             // check if a user already exists or create a new one
             var user = await _dataTable.GetUserAsync(userId);
-            if(user == null) {
+            if(user is null) {
 
                 // check if a user name was requested; otherwise, generate one
                 string userName;
                 if (
                     request.RequestContext.Authorizer.TryGetValue("cognito:username", out var userNameObject)
-                    && (userNameObject is string userNameText)
+                    && (userNameObject?.ToString() is string userNameText)
                 ) {
                     userName = userNameText;
                 } else {
@@ -129,7 +128,7 @@ namespace LambdaSharp.Chat.ChatFunction {
 
             // fetch the user record associated with this connection id
             var user = await GetUserFromConnectionId(CurrentRequest.RequestContext.ConnectionId);
-            if(user == null) {
+            if(user is null) {
                 throw new Exception("Unknown user");
             }
 
@@ -173,7 +172,7 @@ namespace LambdaSharp.Chat.ChatFunction {
 
             // fetch the user record associated with this connection id
             var user = await GetUserFromConnectionId(CurrentRequest.RequestContext.ConnectionId);
-            if(user == null) {
+            if(user is null) {
                 return;
             }
 
@@ -203,7 +202,7 @@ namespace LambdaSharp.Chat.ChatFunction {
 
             // fetch the user record associated with this connection id
             var user = await GetUserFromConnectionId(CurrentRequest.RequestContext.ConnectionId);
-            if(user == null) {
+            if(user is null) {
                 return;
             }
 
@@ -245,14 +244,14 @@ namespace LambdaSharp.Chat.ChatFunction {
 
             // fetch the connection record associated with this connection ID
             var connection = await _dataTable.GetConnectionAsync(connectionId);
-            if(connection == null) {
+            if(connection is null) {
                 LogWarn($"[{caller}] Could not load connection record (connection id: {{0}}, request id: {{}})", CurrentRequest.RequestContext.ConnectionId, CurrentRequest.RequestContext.RequestId);
                 return null;
             }
 
             // fetch the user record associated with this connection
             var user = await _dataTable.GetUserAsync(connection.UserId);
-            if(user == null) {
+            if(user is null) {
                 LogWarn($"[{caller}] Could not load user record (userid: {{0}}, request id: {{}})", connection.UserId, CurrentRequest.RequestContext.RequestId);
                 return null;
             }

@@ -69,7 +69,7 @@ namespace BlazorWebSocket.Pages {
 
             // attempt to restore authentication tokens from local storage
             var authenticationTokens = await GetAuthenticationTokens();
-            if(authenticationTokens == null) {
+            if(authenticationTokens is null) {
                 var guard = await CreateReplayGuardAsync();
                 LoginUrl = CognitoSettings.GetLoginUrl(guard);
                 LogInfo($"Login URL: {LoginUrl}");
@@ -191,7 +191,7 @@ namespace BlazorWebSocket.Pages {
 
             // check if any authentication tokens are stored
             var authenticationTokens = await LoadTokensAsync();
-            if(authenticationTokens == null) {
+            if(authenticationTokens is null) {
                 LogInfo($"No authentication tokens found");
                 return null;
             }
